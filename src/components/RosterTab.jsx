@@ -81,10 +81,10 @@ const COL_WIDTHS = {
 };
 
 export default function RosterTab({
-  entries, settings, isUnlocked, buyInBlurred,
+  entries, settings, isUnlocked, isOperator, buyInBlurred,
   onEdit, onAdd, onDelete, onClearAll, onImport,
   onToggleOffWater, onToggleField, onUpdateInlineField,
-  onClearDeductions, onArchive,
+  onClearDeductions, onArchive, onSignApp,
 }) {
   const entryFee = parseFloat(settings.fees?.entryFee) || 249;
   const offWater = settings.offWater || {};
@@ -97,6 +97,9 @@ export default function RosterTab({
   const [lockedSortBy,   setLockedSortBy]   = useState('boaterFirst');
   const [lockedSortDesc, setLockedSortDesc] = useState(false);
   const [lockedBoatFilter, setLockedBoatFilter] = useState('');
+  const [opSortBy,   setOpSortBy]   = useState('boaterFirst');
+  const [opSortDesc, setOpSortDesc] = useState(false);
+  const [opFilter,   setOpFilter]   = useState('');
   const [globalFilter, setGlobalFilter] = useState({ text: '', regFilter: 'all' });
   const [editingId, setEditingId]       = useState(null);
   const [editValues, setEditValues]     = useState({});
@@ -166,6 +169,12 @@ export default function RosterTab({
   function confirmed(label, action) { setConfirmAction({ label, action }); }
   function handleCancelEdit() { setEditingId(null); setEditValues({}); }
   function handleSaveInline(rowId, field) {
+    const orig = entries.find(e => String(e.id) === String(rowId));
+    if (String(orig?.[field] || '') === String(editValues[field] ?? '')) {
+      setEditingId(null);
+      setEditValues({});
+      return;
+    }
     onUpdateInlineField?.(rowId, field, editValues[field]);
     setEditingId(null);
     setEditValues({});
@@ -400,9 +409,10 @@ export default function RosterTab({
         cell: ({ row: { original: r } }) => (
           <span onClick={e => e.stopPropagation()}>
             <button className="btn btn-outline btn-sm" onClick={() => onEdit(r)}>Edit</button>
-            {r.appSigned === 1 && (
-              <button className="btn btn-outline btn-sm" onClick={() => viewWaiverForEntry(r, settings, fetchContactsWithSignatures)} style={{ marginLeft: 4 }}>App</button>
-            )}
+            {r.appSigned === 1
+              ? <button className="btn btn-outline btn-sm" onClick={() => viewWaiverForEntry(r, settings, fetchContactsWithSignatures)} style={{ marginLeft: 4 }}>App</button>
+              : <button className="btn btn-outline btn-sm" onClick={() => onSignApp?.(r)} style={{ marginLeft: 4, opacity: 0.7 }}>Sign</button>
+            }
             <button className="btn btn-danger btn-sm" onClick={() => onDelete(r.id)} style={{ marginLeft: 4 }}>Del</button>
           </span>
         ),
@@ -442,6 +452,125 @@ export default function RosterTab({
   const tableMinWidth = isUnlocked
     ? Object.values(COL_WIDTHS).reduce((a, b) => a + b, 0)
     : Object.values(COL_WIDTHS).reduce((a, b) => a + b, 0) - COL_WIDTHS.actions;
+
+  // --- Operator middle view ---
+  if (isOperator && !isUnlocked) {
+    function toggleOpSort(col) {
+      if (opSortBy === col) setOpSortDesc(d => !d);
+      else { setOpSortBy(col); setOpSortDesc(false); }
+    }
+    function OpSortTh({ col, label, style }) {
+      const active = opSortBy === col;
+      return (
+        <th onClick={() => toggleOpSort(col)}
+            style={{ cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap', textAlign: 'left', ...style }}>
+          {label}
+          <span style={{ marginLeft: 4, opacity: active ? 1 : 0.3, fontSize: 11 }}>
+            {active && opSortDesc ? '▼' : '▲'}
+          </span>
+        </th>
+      );
+    }
+
+    const q = opFilter.toLowerCase();
+    const opFiltered = entries.filter(e =>
+      !q || `${e.boaterFirst} ${e.boaterLast} ${e.coAnglerFirst} ${e.coAnglerLast} ${e.boatNo}`.toLowerCase().includes(q)
+    );
+    const opSorted = [...opFiltered].sort((a, b) => {
+      let va, vb;
+      if (opSortBy === 'boatNo') {
+        va = a.boatNo ? (parseFloat(a.boatNo) || 0) : Infinity;
+        vb = b.boatNo ? (parseFloat(b.boatNo) || 0) : Infinity;
+      } else {
+        va = (a[opSortBy] || '').toLowerCase();
+        vb = (b[opSortBy] || '').toLowerCase();
+      }
+      const cmp = va < vb ? -1 : va > vb ? 1 : 0;
+      return opSortDesc ? -cmp : cmp;
+    });
+
+    return (
+      <div className="tab-panel active" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+        <div style={{ padding: '12px 20px 10px', flexShrink: 0, background: 'rgba(139,180,225,0.07)', borderBottom: '1px solid rgba(139,180,225,0.2)', fontSize: 13, color: 'var(--header-bg)', lineHeight: 1.6 }}>
+          <strong style={{ color: 'var(--white)' }}>Operator View — All Entries.</strong>{' '}
+          Dimmed rows have not yet completed registration. Use <strong style={{ color: 'var(--white)' }}>Edit</strong> to add a co-angler, adjust buy-in, or update Lunker/Option. Use <strong style={{ color: 'var(--white)' }}>App</strong> to view a signed application.
+        </div>
+        <div className="toolbar" style={{ flexShrink: 0 }}>
+          <input
+            type="search"
+            placeholder="Filter by name, boat #…"
+            value={opFilter}
+            onChange={e => setOpFilter(e.target.value)}
+            style={{
+              background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(139,180,225,0.3)',
+              borderRadius: 8, color: 'var(--white)', fontSize: 16, padding: '7px 12px',
+              flex: '1 1 120px', maxWidth: 260, minWidth: 0, outline: 'none',
+            }}
+          />
+          <span style={{ fontSize: 13, color: 'var(--header-bg)', marginLeft: 8 }}>
+            {opSorted.length} {opSorted.length === 1 ? 'entry' : 'entries'}
+          </span>
+        </div>
+        <div className="table-wrapper">
+          <table style={{ tableLayout: 'fixed', minWidth: 860 }}>
+            <colgroup>
+              <col style={{ width: '115px' }} /><col style={{ width: '115px' }} />
+              <col style={{ width: '110px' }} /><col style={{ width: '110px' }} />
+              <col style={{ width: '58px' }} />
+              <col style={{ width: '65px' }} /><col style={{ width: '65px' }} />
+              <col style={{ width: '72px' }} />
+              <col style={{ width: '75px' }} /><col style={{ width: '75px' }} />
+            </colgroup>
+            <thead>
+              <tr>
+                <OpSortTh col="boaterFirst"   label="Boater First" />
+                <OpSortTh col="boaterLast"    label="Boater Last" />
+                <OpSortTh col="coAnglerFirst" label="Co-Angler First" />
+                <OpSortTh col="coAnglerLast"  label="Co-Angler Last" />
+                <OpSortTh col="boatNo"        label="Boat #" style={{ textAlign: 'center' }} />
+                <th style={{ textAlign: 'center' }}>Lunker</th>
+                <th style={{ textAlign: 'center' }}>Option</th>
+                <th style={{ textAlign: 'right' }}>Buy-In</th>
+                <th style={{ textAlign: 'center' }}>App</th>
+                <th style={{ textAlign: 'center' }}>Edit</th>
+              </tr>
+            </thead>
+            <tbody>
+              {opSorted.map(row => {
+                const isPaidSigned = (row.paid === 1 || row.paid === '1') && (row.appSigned === 1 || row.appSigned === '1');
+                return (
+                  <tr key={row.id} style={!isPaidSigned ? { opacity: 0.65 } : undefined}>
+                    <td className="td-name">{row.boaterFirst}</td>
+                    <td className="td-name">{row.boaterLast}{row.boaterSuffix ? ` ${row.boaterSuffix}` : ''}</td>
+                    <td className="td-name">{row.coAnglerFirst}</td>
+                    <td className="td-name">{row.coAnglerLast}{row.coAnglerSuffix ? ` ${row.coAnglerSuffix}` : ''}</td>
+                    <td style={{ textAlign: 'center', fontWeight: 700, color: row.boatNo ? 'var(--gold-light)' : 'var(--header-bg)' }}>{row.boatNo || '—'}</td>
+                    <td style={{ textAlign: 'center' }}><StatusCell val={row.lunker} /></td>
+                    <td style={{ textAlign: 'center' }}><StatusCell val={row.option} /></td>
+                    <td style={{ textAlign: 'right', fontWeight: 600 }}>
+                      {parseFloat(row.buyIn) > 0 ? `$${parseFloat(row.buyIn).toFixed(2)}` : '—'}
+                    </td>
+                    <td style={{ textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+                      {row.appSigned === 1 || row.appSigned === '1'
+                        ? <button className="btn btn-outline btn-sm" onClick={() => viewWaiverForEntry(row, settings, fetchContactsWithSignatures)}>App</button>
+                        : <span style={{ color: 'var(--header-bg)', fontSize: 12 }}>—</span>
+                      }
+                    </td>
+                    <td style={{ textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+                      <button className="btn btn-outline btn-sm" onClick={() => onEdit?.(row)}>Edit</button>
+                    </td>
+                  </tr>
+                );
+              })}
+              {opSorted.length === 0 && (
+                <tr><td colSpan={10} style={{ textAlign: 'center', color: 'var(--header-bg)', padding: 40 }}>No entries found.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  }
 
   // --- Locked view ---
   if (!isUnlocked) {
@@ -511,8 +640,7 @@ export default function RosterTab({
             <strong>Only names shown are anglers who have signed their application and have paid the entry fee.</strong>
             <br />
             If your name is misspelled or is not showing, please contact{' '}
-            <a href="mailto:info@sfttackle.com" style={{ color: 'var(--gold-light)' }}>info@sfttackle.com</a>
-            {' '}with a signed application and proof of purchase!
+            <a href="mailto:info@sfttackle.com" style={{ color: 'var(--gold-light)' }}>info@sfttackle.com</a>!
           </p>
         </div>
         <div style={{ padding: '8px 16px', flexShrink: 0, borderBottom: '1px solid rgba(168,200,160,0.13)' }}>
@@ -532,11 +660,12 @@ export default function RosterTab({
           />
         </div>
         <div className="table-wrapper">
-          <table style={{ tableLayout: 'fixed', minWidth: 660 }}>
+          <table style={{ tableLayout: 'fixed', minWidth: isOperator ? 675 : 640 }}>
             <colgroup>
-              <col style={{ width: '22%' }} /><col style={{ width: '22%' }} />
-              <col style={{ width: '22%' }} /><col style={{ width: '22%' }} />
-              <col style={{ width: '6%' }} /><col style={{ width: '6%' }} />
+              <col style={{ width: isOperator ? '110px' : '120px' }} /><col style={{ width: isOperator ? '110px' : '120px' }} />
+              <col style={{ width: isOperator ? '100px' : '110px' }} /><col style={{ width: isOperator ? '100px' : '110px' }} />
+              <col style={{ width: '60px' }} /><col style={{ width: '110px' }} />
+              {isOperator && <col style={{ width: '75px' }} />}
             </colgroup>
             <thead>
               <tr>
@@ -546,6 +675,7 @@ export default function RosterTab({
                 <LockedSortTh col="coAnglerLast"   label="Co-Angler Last" />
                 <LockedSortTh col="boatNo"         label="Boat #" style={{ textAlign: 'center' }} />
                 <LockedSortTh col="signedUpAt"     label="Signed Up" style={{ textAlign: 'center' }} />
+                {isOperator && <th style={{ textAlign: 'center' }}>App</th>}
               </tr>
             </thead>
             <tbody>
@@ -557,10 +687,15 @@ export default function RosterTab({
                   <td className="td-name">{row.coAnglerLast}{row.coAnglerSuffix ? ` ${row.coAnglerSuffix}` : ''}</td>
                   <td style={{ textAlign: 'center', fontWeight: 700, color: row.boatNo ? 'var(--gold-light)' : 'var(--header-bg)' }}>{row.boatNo || '—'}</td>
                   <td style={{ textAlign: 'center', fontSize: 11, color: 'var(--header-bg)', whiteSpace: 'nowrap' }}>{fmtSignedUp(row.signedUpAt)}</td>
+                  {isOperator && (
+                    <td style={{ textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+                      <button className="btn btn-outline btn-sm" onClick={() => viewWaiverForEntry(row, settings, fetchContactsWithSignatures)}>App</button>
+                    </td>
+                  )}
                 </tr>
               ))}
               {lockedSorted.length === 0 && (
-                <tr><td colSpan={6} style={{ textAlign: 'center', color: 'var(--header-bg)', padding: 40 }}>No registered entries yet.</td></tr>
+                <tr><td colSpan={isOperator ? 7 : 6} style={{ textAlign: 'center', color: 'var(--header-bg)', padding: 40 }}>No registered entries yet.</td></tr>
               )}
             </tbody>
           </table>

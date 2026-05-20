@@ -62,7 +62,7 @@ function ToggleButton({ value, onChange }) {
   );
 }
 
-export default function EditModal({ entry, onSave, onCancel, settings }) {
+export default function EditModal({ entry, onSave, onCancel, settings, operatorMode = false }) {
   const entryFee = parseFloat(settings?.fees?.entryFee) || 249;
   const [form, setForm] = useState({ ...EMPTY });
   const [errors, setErrors] = useState({});
@@ -190,65 +190,74 @@ export default function EditModal({ entry, onSave, onCancel, settings }) {
 
           <form onSubmit={handleSubmit}>
             <div className="edit-section-label">Boater</div>
-            <div className="edit-grid-2">
-              <div className="form-field">
-                <label htmlFor="em-boater-first">Boater First{isNew ? ' *' : ''}</label>
-                <input ref={firstInputRef} id="em-boater-first" name="boaterFirst" type="text" value={form.boaterFirst} placeholder="First"
-                       onChange={e => set('boaterFirst', e.target.value)}
-                       style={errBorder('boaterFirst')} />
-                {err('boaterFirst')}
+            {operatorMode ? (
+              <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(139,180,225,0.18)', borderRadius: 8, padding: '10px 14px', marginBottom: 12, fontSize: 14, color: 'var(--white)' }}>
+                <span style={{ fontWeight: 700 }}>{form.boaterFirst} {form.boaterLast}{form.boaterSuffix ? ` ${form.boaterSuffix}` : ''}</span>
+                {form.boaterPhone && <span style={{ marginLeft: 12, color: 'var(--header-bg)', fontSize: 12 }}>{form.boaterPhone}</span>}
               </div>
-              <div className="form-field">
-                <label htmlFor="em-boater-last">Boater Last{isNew ? ' *' : ''}</label>
-                {isNew ? (
-                  <ContactSuggest
-                    value={form.boaterLast}
-                    placeholder="Last"
-                    onChange={v => set('boaterLast', v)}
-                    onSelect={c => setForm(prev => ({ ...prev, boaterFirst: c.firstName, boaterLast: c.lastName, boaterSuffix: c.suffix || '', boaterPhone: c.phone, boaterEmail: c.email || prev.boaterEmail }))}
-                    inputProps={{ id: 'em-boater-last', name: 'boaterLast', style: errBorder('boaterLast') }}
-                  />
-                ) : (
-                  <input id="em-boater-last" name="boaterLast" type="text" value={form.boaterLast} placeholder="Last"
-                         onChange={e => set('boaterLast', e.target.value)}
-                         style={errBorder('boaterLast')} />
-                )}
-                {err('boaterLast')}
+            ) : (
+              <div className="edit-grid-2">
+                <div className="form-field">
+                  <label htmlFor="em-boater-first">Boater First{isNew ? ' *' : ''}</label>
+                  <input ref={firstInputRef} id="em-boater-first" name="boaterFirst" type="text" value={form.boaterFirst} placeholder="First"
+                         onChange={e => set('boaterFirst', e.target.value)}
+                         style={errBorder('boaterFirst')} />
+                  {err('boaterFirst')}
+                </div>
+                <div className="form-field">
+                  <label htmlFor="em-boater-last">Boater Last{isNew ? ' *' : ''}</label>
+                  {isNew ? (
+                    <ContactSuggest
+                      value={form.boaterLast}
+                      placeholder="Last"
+                      onChange={v => set('boaterLast', v)}
+                      onSelect={c => setForm(prev => ({ ...prev, boaterFirst: c.firstName, boaterLast: c.lastName, boaterSuffix: c.suffix || '', boaterPhone: c.phone, boaterEmail: c.email || prev.boaterEmail }))}
+                      inputProps={{ id: 'em-boater-last', name: 'boaterLast', style: errBorder('boaterLast') }}
+                    />
+                  ) : (
+                    <input id="em-boater-last" name="boaterLast" type="text" value={form.boaterLast} placeholder="Last"
+                           onChange={e => set('boaterLast', e.target.value)}
+                           style={errBorder('boaterLast')} />
+                  )}
+                  {err('boaterLast')}
+                </div>
+                <div className="form-field" style={{ gridColumn: '1 / -1' }}>
+                  <label htmlFor="em-boater-suffix">Suffix</label>
+                  <select id="em-boater-suffix" value={form.boaterSuffix} onChange={e => set('boaterSuffix', e.target.value)} style={{ ...SUFFIX_STYLE, maxWidth: 120 }}>
+                    {SUFFIX_OPTIONS.map(o => <option key={o} value={o}>{o || '—'}</option>)}
+                  </select>
+                </div>
+                <div className="form-field">
+                  <label htmlFor="em-boater-phone">Boater Phone{isNew ? ' *' : ''}</label>
+                  <input id="em-boater-phone" name="boaterPhone" type="tel" value={form.boaterPhone} placeholder="555-123-4567"
+                         onChange={e => set('boaterPhone', e.target.value)}
+                         onBlur={e => set('boaterPhone', formatPhone(e.target.value))}
+                         style={errBorder('boaterPhone')} />
+                  {err('boaterPhone')}
+                </div>
+                <div className="form-field">
+                  <label htmlFor="em-boater-email">Boater Email</label>
+                  <EmailInput id="em-boater-email" name="boaterEmail" value={form.boaterEmail} onChange={v => set('boaterEmail', v)} />
+                </div>
               </div>
-              <div className="form-field" style={{ gridColumn: '1 / -1' }}>
-                <label htmlFor="em-boater-suffix">Suffix</label>
-                <select id="em-boater-suffix" value={form.boaterSuffix} onChange={e => set('boaterSuffix', e.target.value)} style={{ ...SUFFIX_STYLE, maxWidth: 120 }}>
-                  {SUFFIX_OPTIONS.map(o => <option key={o} value={o}>{o || '—'}</option>)}
-                </select>
-              </div>
-              <div className="form-field">
-                <label htmlFor="em-boater-phone">Boater Phone{isNew ? ' *' : ''}</label>
-                <input id="em-boater-phone" name="boaterPhone" type="tel" value={form.boaterPhone} placeholder="555-123-4567"
-                       onChange={e => set('boaterPhone', e.target.value)}
-                       onBlur={e => set('boaterPhone', formatPhone(e.target.value))}
-                       style={errBorder('boaterPhone')} />
-                {err('boaterPhone')}
-              </div>
-              <div className="form-field">
-                <label htmlFor="em-boater-email">Boater Email</label>
-                <EmailInput id="em-boater-email" name="boaterEmail" value={form.boaterEmail} onChange={v => set('boaterEmail', v)} />
-              </div>
-            </div>
+            )}
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '8px 0' }}>
-              <div style={{ flex: 1, height: 1, background: 'rgba(168,200,160,0.15)' }} />
-              <button type="button" onClick={swapAnglers} style={{
-                padding: '4px 12px', borderRadius: 6, cursor: 'pointer',
-                fontSize: 12, fontWeight: 700,
-                border: '1px solid rgba(139,180,225,0.3)',
-                background: 'rgba(255,255,255,0.05)',
-                color: 'var(--header-bg)',
-                whiteSpace: 'nowrap',
-              }}>
-                ⇅ Swap Boater / Co-Angler
-              </button>
-              <div style={{ flex: 1, height: 1, background: 'rgba(168,200,160,0.15)' }} />
-            </div>
+            {!operatorMode && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, margin: '8px 0' }}>
+                <div style={{ flex: 1, height: 1, background: 'rgba(168,200,160,0.15)' }} />
+                <button type="button" onClick={swapAnglers} style={{
+                  padding: '4px 12px', borderRadius: 6, cursor: 'pointer',
+                  fontSize: 12, fontWeight: 700,
+                  border: '1px solid rgba(139,180,225,0.3)',
+                  background: 'rgba(255,255,255,0.05)',
+                  color: 'var(--header-bg)',
+                  whiteSpace: 'nowrap',
+                }}>
+                  ⇅ Swap Boater / Co-Angler
+                </button>
+                <div style={{ flex: 1, height: 1, background: 'rgba(168,200,160,0.15)' }} />
+              </div>
+            )}
 
             <div className="edit-section-label">Co-Angler</div>
             <div className="edit-grid-2">
@@ -259,7 +268,7 @@ export default function EditModal({ entry, onSave, onCancel, settings }) {
               </div>
               <div className="form-field">
                 <label htmlFor="em-co-last">Co-Angler Last</label>
-                {isNew ? (
+                {(isNew || !entry.coAnglerLast) ? (
                   <ContactSuggest
                     value={form.coAnglerLast}
                     placeholder="Last"
@@ -292,74 +301,102 @@ export default function EditModal({ entry, onSave, onCancel, settings }) {
               </div>
             </div>
 
-            <div className="edit-section-label">Catch Details</div>
-            <div className="edit-grid-3">
-              <div className="form-field">
-                <label htmlFor="em-boat-no">Boat #</label>
-                <input id="em-boat-no" name="boatNo" type="text" value={form.boatNo} placeholder="42" inputMode="numeric"
-                       onChange={e => set('boatNo', e.target.value)} />
-              </div>
-              <div className="form-field">
-                <label htmlFor="em-num-fish"># Fish</label>
-                <input id="em-num-fish" name="numFish" type="number" value={form.numFish} placeholder="0" min="0" max="10" inputMode="numeric"
-                       onChange={e => set('numFish', e.target.value)} />
-              </div>
-              <div className="form-field">
-                <label htmlFor="em-lunker-wt">Lunker Wt (lbs)</label>
-                <input id="em-lunker-wt" name="lunkerWeight" type="number" value={form.lunkerWeight} placeholder="0.00" step="0.01" min="0" inputMode="decimal"
-                       onChange={e => set('lunkerWeight', e.target.value)} />
-              </div>
-              <div className="form-field">
-                <label htmlFor="em-total-wt">Total Wt (lbs)</label>
-                <input id="em-total-wt" name="totalWeight" type="number" value={form.totalWeight} placeholder="0.00" step="0.01" min="0" inputMode="decimal"
-                       onChange={e => set('totalWeight', e.target.value)} />
-              </div>
-              <div className="form-field">
-                <label htmlFor="em-buy-in">Buy-In ($)</label>
-                <input id="em-buy-in" name="buyIn" type="text" value={form.buyIn} placeholder="0.00" inputMode="decimal"
-                       onChange={e => set('buyIn', e.target.value)}
-                       onBlur={e => {
-                         const result = evalMath(e.target.value);
-                         if (!isNaN(result)) set('buyIn', parseFloat(result.toFixed(2)));
-                       }}
-                       style={errBorder('buyIn')} />
-                {err('buyIn')}
-              </div>
-            </div>
-
-            {(parseFloat(form.rawWeight) > 0 || parseInt(form.deadFish) > 0 || parseInt(form.shortFish) > 0) && (
-              <div style={{ marginBottom: 14 }}>
-                <div style={{ background: 'rgba(255,107,107,0.08)', border: '1px solid rgba(255,107,107,0.3)', borderRadius: 8, padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-                  <div style={{ fontSize: 12, color: '#ff9090' }}>
-                    <strong>Deductions on record:</strong>
-                    {parseFloat(form.rawWeight) > 0 && <span style={{ marginLeft: 8 }}>Scale {parseFloat(form.rawWeight).toFixed(2)} lbs</span>}
-                    {parseInt(form.deadFish) > 0 && <span style={{ marginLeft: 8 }}>{form.deadFish} dead</span>}
-                    {parseInt(form.shortFish) > 0 && <span style={{ marginLeft: 8 }}>{form.shortFish} short</span>}
+            {!operatorMode && (
+              <>
+                <div className="edit-section-label">Catch Details</div>
+                <div className="edit-grid-3">
+                  <div className="form-field">
+                    <label htmlFor="em-boat-no">Boat #</label>
+                    <input id="em-boat-no" name="boatNo" type="text" value={form.boatNo} placeholder="42" inputMode="numeric"
+                           onChange={e => set('boatNo', e.target.value)} />
                   </div>
-                  <button type="button" className="btn btn-danger btn-sm"
-                    onClick={() => setForm(prev => ({ ...prev, rawWeight: null, deadFish: 0, shortFish: 0 }))}>
-                    ✕ Clear Deductions
-                  </button>
+                  <div className="form-field">
+                    <label htmlFor="em-num-fish"># Fish</label>
+                    <input id="em-num-fish" name="numFish" type="number" value={form.numFish} placeholder="0" min="0" max="10" inputMode="numeric"
+                           onChange={e => set('numFish', e.target.value)} />
+                  </div>
+                  <div className="form-field">
+                    <label htmlFor="em-lunker-wt">Lunker Wt (lbs)</label>
+                    <input id="em-lunker-wt" name="lunkerWeight" type="number" value={form.lunkerWeight} placeholder="0.00" step="0.01" min="0" inputMode="decimal"
+                           onChange={e => set('lunkerWeight', e.target.value)} />
+                  </div>
+                  <div className="form-field">
+                    <label htmlFor="em-total-wt">Total Wt (lbs)</label>
+                    <input id="em-total-wt" name="totalWeight" type="number" value={form.totalWeight} placeholder="0.00" step="0.01" min="0" inputMode="decimal"
+                           onChange={e => set('totalWeight', e.target.value)} />
+                  </div>
+                  <div className="form-field">
+                    <label htmlFor="em-buy-in">Buy-In ($)</label>
+                    <input id="em-buy-in" name="buyIn" type="text" value={form.buyIn} placeholder="0.00" inputMode="decimal"
+                           onChange={e => set('buyIn', e.target.value)}
+                           onBlur={e => {
+                             const result = evalMath(e.target.value);
+                             if (!isNaN(result)) set('buyIn', parseFloat(result.toFixed(2)));
+                           }}
+                           style={errBorder('buyIn')} />
+                    {err('buyIn')}
+                  </div>
                 </div>
-              </div>
+
+                {(parseFloat(form.rawWeight) > 0 || parseInt(form.deadFish) > 0 || parseInt(form.shortFish) > 0) && (
+                  <div style={{ marginBottom: 14 }}>
+                    <div style={{ background: 'rgba(255,107,107,0.08)', border: '1px solid rgba(255,107,107,0.3)', borderRadius: 8, padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                      <div style={{ fontSize: 12, color: '#ff9090' }}>
+                        <strong>Deductions on record:</strong>
+                        {parseFloat(form.rawWeight) > 0 && <span style={{ marginLeft: 8 }}>Scale {parseFloat(form.rawWeight).toFixed(2)} lbs</span>}
+                        {parseInt(form.deadFish) > 0 && <span style={{ marginLeft: 8 }}>{form.deadFish} dead</span>}
+                        {parseInt(form.shortFish) > 0 && <span style={{ marginLeft: 8 }}>{form.shortFish} short</span>}
+                      </div>
+                      <button type="button" className="btn btn-danger btn-sm"
+                        onClick={() => setForm(prev => ({ ...prev, rawWeight: null, deadFish: 0, shortFish: 0 }))}>
+                        ✕ Clear Deductions
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
 
             <div className="edit-section-label">Payment &amp; Status</div>
-            <div className="edit-grid-4">
-              {[
-                { key: 'lunker',    label: 'Lunker Paid' },
-                { key: 'option',    label: 'Option Paid' },
-                { key: 'paid',      label: 'Entry Paid'  },
-                { key: 'appSigned', label: 'App Signed'  },
-              ].map(({ key, label }) => (
-                <div key={key} className="form-field">
-                  <span className="field-label">{label}</span>
-                  <ToggleButton value={form[key]} onChange={v => set(key, v)} />
+            {operatorMode ? (
+              <div className="edit-grid-3">
+                <div className="form-field">
+                  <span className="field-label">Lunker Paid</span>
+                  <ToggleButton value={form.lunker} onChange={v => set('lunker', v)} />
                 </div>
-              ))}
-            </div>
+                <div className="form-field">
+                  <span className="field-label">Option Paid</span>
+                  <ToggleButton value={form.option} onChange={v => set('option', v)} />
+                </div>
+                <div className="form-field">
+                  <label htmlFor="em-buy-in-op">Buy-In ($)</label>
+                  <input id="em-buy-in-op" name="buyIn" type="text" value={form.buyIn} placeholder="0.00" inputMode="decimal"
+                         onChange={e => set('buyIn', e.target.value)}
+                         onBlur={e => {
+                           const result = evalMath(e.target.value);
+                           if (!isNaN(result)) set('buyIn', parseFloat(result.toFixed(2)));
+                         }}
+                         style={errBorder('buyIn')} />
+                  {err('buyIn')}
+                </div>
+              </div>
+            ) : (
+              <div className="edit-grid-4">
+                {[
+                  { key: 'lunker',    label: 'Lunker Paid' },
+                  { key: 'option',    label: 'Option Paid' },
+                  { key: 'paid',      label: 'Entry Paid'  },
+                  { key: 'appSigned', label: 'App Signed'  },
+                ].map(({ key, label }) => (
+                  <div key={key} className="form-field">
+                    <span className="field-label">{label}</span>
+                    <ToggleButton value={form[key]} onChange={v => set(key, v)} />
+                  </div>
+                ))}
+              </div>
+            )}
 
-            {!isNew && (
+            {!operatorMode && !isNew && (
               <div style={{ marginTop: 14 }}>
                 <div className="edit-section-label">Timestamps</div>
                 <div className="form-field">
@@ -389,7 +426,7 @@ export default function EditModal({ entry, onSave, onCancel, settings }) {
               </div>
             )}
 
-            {form.needsAttention && (
+            {!operatorMode && form.needsAttention && (
               <div style={{ marginTop: 12 }}>
                 <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer',
                                background: 'rgba(255,180,80,0.1)', border: '1px solid rgba(255,180,80,0.35)',

@@ -16,7 +16,9 @@ import EditModal from './components/EditModal';
 import UnlockModal from './components/UnlockModal';
 import ConfirmActionModal from './components/ConfirmActionModal';
 import Toast from './components/Toast';
-import { verifyPassword, storePassword, storeLevel, clearPassword, isPasswordStored, revalidatePassword, archiveEntries } from './utils/api';
+import { verifyPassword, storePassword, storeLevel, clearPassword, isPasswordStored, revalidatePassword, archiveEntries, fetchContactsWithSignatures } from './utils/api';
+import WaiverModal from './components/WaiverModal';
+import { contactsToSigs } from './utils/printWaivers';
 import { calcRanks } from './utils/calculations';
 import { useEntries, useCreateEntry, useUpdateEntry, useDeleteEntry, useClearWeighLog, useClearSignUpLog, useClearCheckInLog, useClearCheckOutLog, useClearAllEntries, useCreateEntriesBulk } from './hooks/useEntries';
 import { useSettings, useSaveSettings } from './hooks/useSettings';
@@ -175,10 +177,11 @@ const saveSettingsMut   = useSaveSettings();
       const prev = editingEntry;
       setEditingEntry(null);
       showToast(duplicate ? `Warning: Boat #${entryData.boatNo} is already in use!` : 'Entry saved!', duplicate ? 'warning' : 'success');
-      // Reset appSigned if the co-angler changed — either newly added or swapped to a different person
+      // Reset appSigned only when a co-angler is newly added (was blank before)
+      const coAnglerWasBlank = !prev.coAnglerFirst && !prev.coAnglerLast;
       const coAnglerPersonChanged = prev.appSigned === 1
         && (entryData.coAnglerFirst || entryData.coAnglerLast)
-        && (prev.coAnglerFirst !== entryData.coAnglerFirst || prev.coAnglerLast !== entryData.coAnglerLast);
+        && coAnglerWasBlank;
       updateEntryMut.mutate({ id: prev.id, data: { ...entryData, ...(coAnglerPersonChanged ? { appSigned: 0 } : {}) } }, {
         onSuccess: () => {
           upsertContactsMut.mutate([
@@ -218,6 +221,21 @@ const saveSettingsMut   = useSaveSettings();
     });
   }
 
+  const [rosterWaiver, setRosterWaiver] = useState(null);
+
+  async function handleOpenSignApp(entry) {
+    const contacts = await fetchContactsWithSignatures();
+    const { boaterSig, coaSig } = contactsToSigs(entry, contacts);
+    setRosterWaiver({
+      entry,
+      // When appSigned=0, co-angler must always draw fresh — only prefill boater
+      prefillSigs: {
+        boater:    boaterSig,
+        coAngler:  entry.appSigned === 1 ? coaSig : null,
+      },
+    });
+  }
+
   async function handleToggleEntryField(entryId, field) {
     const entry = rawEntries.find(e => e.id === entryId);
     if (!entry) return;
@@ -254,10 +272,11 @@ const saveSettingsMut   = useSaveSettings();
     const entry = rawEntries.find(e => e.id === entryId);
     if (!entry) return;
     showToast('Entry updated!', 'success');
-    // Reset appSigned if co-angler changed (added, swapped to different person, or replaced)
+    // Reset appSigned only when a co-angler is newly added (was blank before)
+    const coAnglerWasBlank = !entry.coAnglerFirst && !entry.coAnglerLast;
     const coAnglerPersonChanged = entry.appSigned === 1
       && (updates.coAnglerFirst || updates.coAnglerLast)
-      && (entry.coAnglerFirst !== updates.coAnglerFirst || entry.coAnglerLast !== updates.coAnglerLast);
+      && coAnglerWasBlank;
     const shouldResetAppSigned = coAnglerPersonChanged;
     updateEntryMut.mutate({ id: entryId, data: { ...entry, ...updates, preserveWeighTime: true, ...(shouldResetAppSigned ? { appSigned: 0 } : {}) } }, {
       onSuccess: (updated) => {
@@ -574,6 +593,7 @@ const saveSettingsMut   = useSaveSettings();
             entries={rankedEntries}
             settings={settingsWithTheme}
             isUnlocked={isAdmin}
+            isOperator={isOperator}
             buyInBlurred={buyInBlurred}
             onEdit={setEditingEntry}
             onAdd={() => setEditingEntry({})}
@@ -585,6 +605,7 @@ const saveSettingsMut   = useSaveSettings();
             onUpdateInlineField={handleUpdateInlineField}
             onClearDeductions={handleClearDeductions}
             onArchive={handleArchive}
+            onSignApp={handleOpenSignApp}
           />
         </div>
         <div style={{ display: activeTab === 'leaderboard' ? 'contents' : 'none' }}>
@@ -610,7 +631,7 @@ const saveSettingsMut   = useSaveSettings();
         {everUnlocked && (
           <>
             <div style={{ display: activeTab === 'signup' ? 'contents' : 'none' }}>
-              <SignUpTab onAddEntry={handleSignUpEntry} settings={settingsWithTheme} entries={rawEntries} onEntriesRefresh={() => entriesQuery.refetch()} />
+              <SignUpTab onAddEntry={handleSignUpEntry} onDeleteEntry={(id) => deleteEntryMut.mutate(id)} settings={settingsWithTheme} entries={rawEntries} onEntriesRefresh={() => entriesQuery.refetch()} />
             </div>
             <div style={{ display: activeTab === 'checkin' ? 'contents' : 'none' }}>
               <CheckInTab entries={rankedEntries} onSave={handleCheckInSave} />
@@ -668,6 +689,18 @@ const saveSettingsMut   = useSaveSettings();
           onSave={handleSaveEntry}
           onCancel={() => setEditingEntry(null)}
           settings={settingsWithTheme}
+          operatorMode={!isAdmin && isOperator}
+        />
+      )}
+
+      {rosterWaiver && (
+        <WaiverModal
+          entry={rosterWaiver.entry}
+          boaterContactId={null}
+          coAnglerContactId={null}
+          prefillSigs={rosterWaiver.prefillSigs}
+          settings={settingsWithTheme}
+          onClose={() => { setRosterWaiver(null); entriesQuery.refetch(); }}
         />
       )}
 

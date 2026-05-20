@@ -7,8 +7,10 @@ const LEGAL_CLAUSES = [
   '<strong>5.</strong> I have sufficient health, accident and liability insurance to cover any bodily injury or property damage incurred by myself or others as a result of my participation in this event. If I have no such insurance, I represent that I am capable of paying for any and all such expenses or liability.',
 ];
 
-// sig: { signature: dataUrl|null, signedAt: isoString|null }
-function sigBlock(sig, label, number, year) {
+// sig: { signature: dataUrl|'paper'|null, signedAt: isoString|null }
+function sigBlock(sig, label, number, year, isPaper = false) {
+  const hasPaper = isPaper || sig?.signature === 'paper';
+  const hasDigital = sig?.signature && sig.signature !== 'paper';
   const sigDate = sig?.signedAt
     ? new Date(sig.signedAt).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: '2-digit', hour: 'numeric', minute: '2-digit' })
     : '';
@@ -19,9 +21,11 @@ function sigBlock(sig, label, number, year) {
         <span style="font-weight:400;color:#666;font-size:10px;">(Good through 12/31/${year})</span>
       </div>
       <div style="border:1px solid #aaa;border-radius:3px;background:#fafafa;min-height:60px;">
-        ${sig?.signature
+        ${hasDigital
           ? `<img src="${sig.signature}" style="display:block;width:100%;height:auto;max-height:70px;object-fit:contain;object-position:left;" />`
-          : `<div style="display:flex;align-items:center;justify-content:center;height:60px;color:#999;font-size:11px;">Signature not on file</div>`}
+          : hasPaper
+            ? `<div style="display:flex;align-items:center;justify-content:center;height:60px;color:#555;font-size:12px;font-weight:600;font-style:italic;">Paper Application</div>`
+            : `<div style="display:flex;align-items:center;justify-content:center;height:60px;color:#999;font-size:11px;">Signature not on file</div>`}
       </div>
       ${sigDate ? `<div style="font-size:9px;color:#666;margin-top:3px;">Signed: ${sigDate}</div>` : ''}
     </div>`;
@@ -39,6 +43,8 @@ function waiverHTML(entry, boaterSig, coaSig, settings) {
   const header    = [tDate, tLocation].filter(Boolean).join(' · ');
 
   const hasCoAngler = !!(entry.coAnglerFirst && entry.coAnglerLast);
+  // appSigned=1 with no real digital signature means paper copy
+  const isPaper     = entry.appSigned === 1 && (!boaterSig?.signature || boaterSig?.signature === 'paper');
   const boaterName  = [entry.boaterFirst,   entry.boaterLast,   entry.boaterSuffix].filter(Boolean).join(' ');
   const coaName     = hasCoAngler ? [entry.coAnglerFirst, entry.coAnglerLast, entry.coAnglerSuffix].filter(Boolean).join(' ') : '';
   const buyInAmt    = parseFloat(entry.buyIn || 0).toFixed(2);
@@ -84,8 +90,8 @@ function waiverHTML(entry, boaterSig, coaSig, settings) {
         THIS SIGNED WAIVER IS IN EFFECT FOR ANY SUSQUEHANNA FISHING TACKLE, INC. TOURNAMENT IN ${year}
       </div>
 
-      ${sigBlock(boaterSig, 'Boater', 1, year)}
-      ${hasCoAngler ? sigBlock(coaSig, 'Co-Angler', 2, year) : ''}
+      ${sigBlock(boaterSig, 'Boater', 1, year, isPaper)}
+      ${hasCoAngler ? sigBlock(coaSig, 'Co-Angler', 2, year, isPaper) : ''}
     </div>`;
 }
 

@@ -147,7 +147,38 @@ export async function onRequestDelete({ params, request, env }) {
   if (!/^\d+$/.test(params.id)) return Response.json({ error: 'Invalid id' }, { status: 400 });
   try {
     const db = getDb(env);
+
+    // Read entry before deleting so we can clean up contact waiver data
+    const entryResult = await db.execute({
+      sql: 'SELECT boater_first, boater_last, boater_phone, co_angler_first, co_angler_last, co_angler_phone, app_signed FROM entries WHERE id=?',
+      args: [params.id],
+    });
+    const entry = entryResult.rows[0];
+
     await db.execute({ sql: 'DELETE FROM entries WHERE id = ?', args: [params.id] });
+
+    // If the entry had a signed application, clear the waiver data from the associated contacts
+    if (entry?.app_signed === 1) {
+      const norm = s => (s || '').toLowerCase().trim();
+      const clearWaiver = async (first, last) => {
+        if (!first && !last) return;
+        const rows = await db.execute({
+          sql: 'SELECT id FROM contacts WHERE LOWER(TRIM(first_name))=? AND LOWER(TRIM(last_name))=?',
+          args: [norm(first), norm(last)],
+        });
+        for (const row of rows.rows) {
+          await db.execute({
+            sql: 'UPDATE contacts SET signature=NULL, signed_at=NULL, waiver_year=NULL, waiver_snapshot=NULL WHERE id=?',
+            args: [row.id],
+          });
+        }
+      };
+      await clearWaiver(entry.boater_first, entry.boater_last);
+      if (entry.co_angler_first || entry.co_angler_last) {
+        await clearWaiver(entry.co_angler_first, entry.co_angler_last);
+      }
+    }
+
     return Response.json({ success: true });
   } catch (e) {
     return Response.json({ error: e.message }, { status: 500 });

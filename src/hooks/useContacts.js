@@ -16,7 +16,10 @@ export function useUpdateContact() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: ({ id, data }) => updateContact(id, data),
-    onSuccess: () => qc.invalidateQueries({ queryKey: CONTACTS_KEY }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: CONTACTS_KEY });
+      qc.invalidateQueries({ queryKey: ['entries'] });
+    },
   });
 }
 

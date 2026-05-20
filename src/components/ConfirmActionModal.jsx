@@ -61,12 +61,12 @@ export default function ConfirmActionModal({ label, onConfirm, onCancel }) {
               <input
                 ref={inputRef}
                 id="cam-password"
-                name="password"
-                type="password"
+                type="text"
+                autoComplete="off"
                 value={password}
                 placeholder="Password"
                 onChange={e => { setPassword(e.target.value); setError(''); }}
-                style={{ ...FIELD, ...(error ? { borderColor: '#ff6b6b' } : {}) }}
+                style={{ ...FIELD, ...(error ? { borderColor: '#ff6b6b' } : {}), WebkitTextSecurity: 'disc' }}
               />
               {error && (
                 <div style={{ fontSize: 11, color: '#ff6b6b', marginTop: 4 }}>{error}</div>

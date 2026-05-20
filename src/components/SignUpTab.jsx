@@ -1,9 +1,9 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import ContactSuggest from './ContactSuggest';
 import EmailInput from './EmailInput';
 import WaiverModal from './WaiverModal';
 import { formatPhone } from '../utils/phone';
-import { fetchContactsWithSignatures } from '../utils/api';
+import { fetchContactsWithSignatures, saveContactWaiver, lookupContactId } from '../utils/api';
 import { printAllWaivers, viewWaiverForEntry, contactsToSigs } from '../utils/printWaivers';
 
 const FIELD = {
@@ -44,7 +44,7 @@ const EMPTY = {
   coAnglerFirst: '', coAnglerLast: '', coAnglerSuffix: '', coAnglerPhone: '', coAnglerEmail: '',
 };
 
-export default function SignUpTab({ onAddEntry, settings, entries = [], onEntriesRefresh }) {
+export default function SignUpTab({ onAddEntry, onDeleteEntry, settings, entries = [], onEntriesRefresh }) {
   const entryFee = parseFloat(settings?.fees?.entryFee) || 250;
   const lunkerFee = parseFloat(settings?.fees?.lunkerFee) || 10;
   const optFee    = parseFloat(settings?.fees?.optFee)    || 20;
@@ -63,9 +63,39 @@ export default function SignUpTab({ onAddEntry, settings, entries = [], onEntrie
   const [feeOption, setFeeOption] = useState(false);
   const [paperCopy, setPaperCopy] = useState(false);
 
+  // Operator PIN for paper copy authorization
+  const [paperPinUnlocked,  setPaperPinUnlocked]  = useState(false);
+  const [paperPin,          setPaperPin]          = useState('');
+  const [paperPinError,     setPaperPinError]     = useState('');
+  const [showPaperPin,      setShowPaperPin]      = useState(false);
+  const paperPinRef = useRef(null);
+
+  useEffect(() => {
+    if (showPaperPin) setTimeout(() => paperPinRef.current?.focus(), 50);
+  }, [showPaperPin]);
+
   const boaterFirstRef      = useRef(null);
   const boaterContactIdRef  = useRef(null);
   const coAnglerContactIdRef = useRef(null);
+
+  function tryPaperPin() {
+    if (paperPin === '227737' || paperPin === '2277') {
+      setPaperPinUnlocked(true);
+      setShowPaperPin(false);
+      setPaperPinError('');
+      setPaperPin('');
+      handleSubmit();
+    } else {
+      setPaperPinError('Incorrect PIN');
+    }
+  }
+
+  function resetPaperPin() {
+    setPaperPinUnlocked(false);
+    setPaperPin('');
+    setPaperPinError('');
+    setShowPaperPin(false);
+  }
 
   function set(field, val) {
     setForm(prev => ({ ...prev, [field]: val }));
@@ -88,7 +118,7 @@ export default function SignUpTab({ onAddEntry, settings, entries = [], onEntrie
   }
 
   async function handleSubmit(e) {
-    e.preventDefault();
+    e?.preventDefault();
     const errs = validate();
     if (Object.keys(errs).length) { setErrors(errs); return; }
 
@@ -121,6 +151,25 @@ export default function SignUpTab({ onAddEntry, settings, entries = [], onEntrie
 
     setSubmitting(true);
     const created = await onAddEntry(entry);
+
+    // Paper copy: write 'paper' sentinel to contacts so viewing the app shows "Paper Application"
+    // instead of any older digital signature stored on the contact record.
+    if (created && paperCopy) {
+      try {
+        const now      = new Date().toISOString();
+        const yr       = new Date().getFullYear();
+        const snapshot = JSON.stringify({ year: yr, tournamentDate: settings?.tournamentDate, tournamentLocation: settings?.tournamentLocation });
+        let bCid = boaterContactIdRef.current;
+        if (!bCid) bCid = await lookupContactId(form.boaterFirst.trim(), form.boaterLast.trim(), formatPhone(form.boaterPhone.trim()));
+        if (bCid) await saveContactWaiver(bCid, { signature: 'paper', signedAt: now, waiverYear: yr, waiverSnapshot: snapshot });
+        if (form.coAnglerFirst.trim() && form.coAnglerLast.trim()) {
+          let cCid = coAnglerContactIdRef.current;
+          if (!cCid) cCid = await lookupContactId(form.coAnglerFirst.trim(), form.coAnglerLast.trim(), formatPhone(form.coAnglerPhone.trim()));
+          if (cCid) await saveContactWaiver(cCid, { signature: 'paper', signedAt: now, waiverYear: yr, waiverSnapshot: snapshot });
+        }
+      } catch (_) {}
+    }
+
     setSubmitting(false);
 
     if (created) {
@@ -131,6 +180,7 @@ export default function SignUpTab({ onAddEntry, settings, entries = [], onEntrie
       setFeeLunker(false);
       setFeeOption(false);
       setPaperCopy(false);
+      resetPaperPin();
       boaterContactIdRef.current  = null;
       coAnglerContactIdRef.current = null;
       if (!paperCopy) {
@@ -150,6 +200,7 @@ export default function SignUpTab({ onAddEntry, settings, entries = [], onEntrie
     setFeeLunker(false);
     setFeeOption(false);
     setPaperCopy(false);
+    resetPaperPin();
     boaterContactIdRef.current  = null;
     coAnglerContactIdRef.current = null;
     setTimeout(() => boaterFirstRef.current?.focus(), 0);
@@ -164,7 +215,11 @@ export default function SignUpTab({ onAddEntry, settings, entries = [], onEntrie
         entry,
         boaterContactId: null,
         coAnglerContactId: null,
-        prefillSigs: { boater: boaterSig, coAngler: coaSig },
+        prefillSigs: {
+          boater:   boaterSig,
+          // appSigned=0 means co-angler hasn't signed this entry yet — always draw fresh
+          coAngler: entry.appSigned === 1 ? coaSig : null,
+        },
       });
     } finally {
       setOpeningWaiver(null);
@@ -178,6 +233,26 @@ export default function SignUpTab({ onAddEntry, settings, entries = [], onEntrie
   const fieldBorder = (field) => errors[field]
     ? { ...FIELD, borderColor: '#ff6b6b' }
     : FIELD;
+
+  // Duplicate detection — check name or phone against existing entries
+  const normName = s => (s || '').toLowerCase().trim();
+  const normPhone = s => (s || '').replace(/\D/g, '');
+  function findDuplicate(first, last, phone) {
+    if (!first.trim() && !last.trim()) return null;
+    return entries.find(e => {
+      const nameMatch = normName(e.boaterFirst) === normName(first) && normName(e.boaterLast) === normName(last)
+        || (normName(e.coAnglerFirst) === normName(first) && normName(e.coAnglerLast) === normName(last));
+      const ph = normPhone(phone);
+      const phoneMatch = ph.length >= 10 && (
+        normPhone(e.boaterPhone) === ph || normPhone(e.coAnglerPhone) === ph
+      );
+      return nameMatch || phoneMatch;
+    }) ?? null;
+  }
+  const boaterDup   = findDuplicate(form.boaterFirst, form.boaterLast, form.boaterPhone);
+  const coAnglerDup = (form.coAnglerFirst || form.coAnglerLast)
+    ? findDuplicate(form.coAnglerFirst, form.coAnglerLast, form.coAnglerPhone)
+    : null;
 
   return (
     <div className="tab-panel active">
@@ -253,6 +328,14 @@ export default function SignUpTab({ onAddEntry, settings, entries = [], onEntrie
             />
             {err('boaterPhone')}
           </div>
+          {boaterDup && (
+            <div style={{ marginTop: 10, padding: '8px 12px', borderRadius: 6, background: 'rgba(240,173,78,0.12)', border: '1px solid rgba(240,173,78,0.45)', fontSize: 12, color: '#f0ad4e' }}>
+              ⚠ {[boaterDup.boaterFirst, boaterDup.boaterLast].filter(Boolean).join(' ') === [form.boaterFirst.trim(), form.boaterLast.trim()].filter(Boolean).join(' ')
+                ? `${form.boaterFirst.trim()} ${form.boaterLast.trim()} is already signed up`
+                : `This phone number matches an existing entry`}
+              {boaterDup.boatNo ? ` — Boat #${boaterDup.boatNo}` : ''}
+            </div>
+          )}
         </div>
 
         {/* ── Co-Angler ── */}
@@ -305,6 +388,15 @@ export default function SignUpTab({ onAddEntry, settings, entries = [], onEntrie
             />
             {err('coAnglerPhone')}
           </div>
+          {coAnglerDup && (
+            <div style={{ marginTop: 10, padding: '8px 12px', borderRadius: 6, background: 'rgba(240,173,78,0.12)', border: '1px solid rgba(240,173,78,0.45)', fontSize: 12, color: '#f0ad4e' }}>
+              ⚠ {[coAnglerDup.boaterFirst, coAnglerDup.boaterLast].filter(Boolean).join(' ') === [form.coAnglerFirst.trim(), form.coAnglerLast.trim()].filter(Boolean).join(' ')
+                || [coAnglerDup.coAnglerFirst, coAnglerDup.coAnglerLast].filter(Boolean).join(' ') === [form.coAnglerFirst.trim(), form.coAnglerLast.trim()].filter(Boolean).join(' ')
+                ? `${form.coAnglerFirst.trim()} ${form.coAnglerLast.trim()} is already signed up`
+                : `This phone number matches an existing entry`}
+              {coAnglerDup.boatNo ? ` — Boat #${coAnglerDup.boatNo}` : ''}
+            </div>
+          )}
         </div>
 
         {/* ── Entry Fees ── */}
@@ -316,7 +408,7 @@ export default function SignUpTab({ onAddEntry, settings, entries = [], onEntrie
             <input
               type="checkbox"
               checked={paperCopy}
-              onChange={e => setPaperCopy(e.target.checked)}
+              onChange={e => { setPaperCopy(e.target.checked); if (!e.target.checked) resetPaperPin(); }}
               style={{ width: 18, height: 18, cursor: 'pointer', accentColor: '#e8c876' }}
             />
             <span style={{ fontSize: 14, fontWeight: 700, color: paperCopy ? 'var(--gold-light)' : 'var(--header-bg)' }}>
@@ -369,15 +461,60 @@ export default function SignUpTab({ onAddEntry, settings, entries = [], onEntrie
         </div>
 
         {/* ── Actions ── */}
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button type="submit" className="btn btn-gold" disabled={submitting}
-                  style={{ flex: 1, fontSize: 16, padding: '12px 0' }}>
-            {submitting ? 'Saving…' : paperCopy ? '+ Sign Up (Paper)' : '+ Sign Up'}
-          </button>
-          <button type="button" className="btn btn-outline" onClick={handleClear}
-                  style={{ padding: '12px 20px' }}>
-            Clear
-          </button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {paperCopy && !paperPinUnlocked && (
+            <div>
+              {!showPaperPin ? (
+                <button
+                  type="button"
+                  onClick={() => setShowPaperPin(true)}
+                  style={{
+                    width: '100%', padding: '10px 0', borderRadius: 6,
+                    border: '1.5px solid rgba(139,180,225,0.4)', background: 'rgba(255,255,255,0.06)',
+                    fontSize: 14, cursor: 'pointer', color: 'var(--header-bg)', fontWeight: 600,
+                  }}
+                >
+                  🔒 Enter Operator PIN to Submit Paper Copy
+                </button>
+              ) : (
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <input
+                    ref={paperPinRef}
+                    type="text"
+                    inputMode="numeric"
+                    autoComplete="off"
+                    placeholder="Operator PIN"
+                    value={paperPin}
+                    onChange={e => { setPaperPin(e.target.value); setPaperPinError(''); }}
+                    onKeyDown={e => { if (e.key === 'Enter') tryPaperPin(); if (e.key === 'Escape') { setShowPaperPin(false); setPaperPin(''); setPaperPinError(''); } }}
+                    style={{ flex: 1, padding: '10px 12px', fontSize: 15, borderRadius: 6, border: paperPinError ? '1.5px solid #c00' : '1.5px solid rgba(139,180,225,0.4)', background: 'rgba(255,255,255,0.06)', color: 'var(--white)', WebkitTextSecurity: 'disc' }}
+                  />
+                  <button type="button" onClick={tryPaperPin}
+                    style={{ padding: '10px 18px', borderRadius: 6, border: 'none', background: '#1a5276', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+                    Submit
+                  </button>
+                  <button type="button" onClick={() => { setShowPaperPin(false); setPaperPin(''); setPaperPinError(''); }}
+                    style={{ padding: '10px 12px', borderRadius: 6, border: '1px solid rgba(139,180,225,0.3)', background: 'rgba(255,255,255,0.06)', color: 'var(--header-bg)', fontSize: 14, cursor: 'pointer' }}>
+                    ✕
+                  </button>
+                </div>
+              )}
+              {paperPinError && <div style={{ fontSize: 11, color: '#ff6b6b', marginTop: 4 }}>{paperPinError}</div>}
+            </div>
+          )}
+          {paperCopy && paperPinUnlocked && (
+            <div style={{ fontSize: 12, color: '#6fcf97', fontWeight: 600, padding: '4px 0' }}>✓ Operator verified</div>
+          )}
+          <div style={{ display: 'flex', gap: 10 }}>
+            <button type="submit" className="btn btn-gold" disabled={submitting || (paperCopy && !paperPinUnlocked)}
+                    style={{ flex: 1, fontSize: 16, padding: '12px 0', opacity: (paperCopy && !paperPinUnlocked) ? 0.4 : 1 }}>
+              {submitting ? 'Saving…' : paperCopy ? '+ Sign Up (Paper)' : '+ Sign Up'}
+            </button>
+            <button type="button" className="btn btn-outline" onClick={handleClear}
+                    style={{ padding: '12px 20px' }}>
+              Clear
+            </button>
+          </div>
         </div>
       </form>
 
@@ -392,8 +529,8 @@ export default function SignUpTab({ onAddEntry, settings, entries = [], onEntrie
             Recently Signed Up
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {recent.map((r, i) => (
-              <div key={i} style={{
+            {recent.map((r) => (
+              <div key={r.id} style={{
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center',
                 background: 'rgba(255,255,255,0.04)', borderRadius: 8,
                 padding: '8px 12px', fontSize: 13,
@@ -555,6 +692,11 @@ export default function SignUpTab({ onAddEntry, settings, entries = [], onEntrie
               setRecent(prev => prev.map(r =>
                 r.id === pendingWaiver.entry.id ? { ...r, appSigned: 1, buyIn: result.buyIn, lunker: result.lunker, option: result.option, paid: result.paid } : r
               ));
+              onEntriesRefresh?.();
+            } else if (!pendingWaiver.prefillSigs) {
+              // Fresh sign-up cancelled — delete the entry so it doesn't linger on the roster
+              onDeleteEntry?.(pendingWaiver.entry.id);
+              setRecent(prev => prev.filter(r => r.id !== pendingWaiver.entry.id));
               onEntriesRefresh?.();
             }
             setPendingWaiver(null);

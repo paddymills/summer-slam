@@ -169,6 +169,8 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
   const existingBuyIn   = parseFloat(entry.buyIn || 0);
   // Split fee UI only when both: co-angler mode AND a real existing buy-in to display
   const usesSplitFeeUI  = isCoAnglerMode && existingBuyIn > 0;
+  // When a fee is already on the entry, show fee fields freely — only lock the Submit button
+  const feePreFilled    = existingBuyIn > 0;
 
   const hasCoAngler = !!(entry.coAnglerFirst && entry.coAnglerLast);
 
@@ -220,6 +222,7 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
       setShowPinInput(false);
       setPinError('');
       setPinInput('');
+      handleSubmit(true);
     } else {
       setPinError('Incorrect PIN');
     }
@@ -277,8 +280,8 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
     }
   }
 
-  async function handleSubmit() {
-    if (!unlocked) { setError('Operator must enter their PIN to unlock and record fees before submitting.'); return; }
+  async function handleSubmit(pinVerified = false) {
+    if (!unlocked && !pinVerified) { setError('Operator must enter their PIN to unlock and record fees before submitting.'); return; }
     const amount = usesSplitFeeUI
       ? existingBuyIn + (parseFloat(additionalAmount) || 0)
       : parseFloat(buyInAmount);
@@ -359,7 +362,7 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
 
         {/* ── Entry Fees (operator-locked) ── */}
         <p style={SECTION_HEAD}>Entry Fees</p>
-        {!unlocked ? (
+        {!unlocked && !feePreFilled ? (
           <div style={{ marginBottom: 20 }}>
             {!showPinInput ? (
               <button
@@ -377,17 +380,18 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 <input
                   ref={pinRef}
-                  type="password"
+                  type="text"
                   inputMode="numeric"
+                  autoComplete="off"
                   placeholder="Operator PIN"
                   value={pinInput}
                   onChange={e => { setPinInput(e.target.value); setPinError(''); }}
                   onKeyDown={e => { if (e.key === 'Enter') tryUnlock(); if (e.key === 'Escape') { setShowPinInput(false); setPinInput(''); setPinError(''); }}}
-                  style={{ flex: 1, padding: '10px 12px', fontSize: 15, borderRadius: 6, border: pinError ? '1.5px solid #c00' : '1.5px solid #bbb' }}
+                  style={{ flex: 1, padding: '10px 12px', fontSize: 15, borderRadius: 6, border: pinError ? '1.5px solid #c00' : '1.5px solid #bbb', WebkitTextSecurity: 'disc' }}
                 />
                 <button type="button" onClick={tryUnlock}
                   style={{ padding: '10px 18px', borderRadius: 6, border: 'none', background: '#1a5276', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
-                  Unlock
+                  Submit
                 </button>
                 <button type="button" onClick={() => { setShowPinInput(false); setPinInput(''); setPinError(''); }}
                   style={{ padding: '10px 12px', borderRadius: 6, border: '1px solid #bbb', background: '#eee', fontSize: 14, cursor: 'pointer' }}>
@@ -402,7 +406,7 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
           </div>
         ) : usesSplitFeeUI ? (
           /* ── Co-angler signing mode with existing buy-in: show existing + addition ── */
-          <div style={{ border: '1.5px solid #2e7d32', borderRadius: 8, padding: '14px 16px', marginBottom: 20, background: '#f1f8e9' }}>
+          <div style={{ border: unlocked ? '1.5px solid #2e7d32' : '1.5px solid #bbb', borderRadius: 8, padding: '14px 16px', marginBottom: 20, background: unlocked ? '#f1f8e9' : '#fafafa' }}>
             <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'flex-end' }}>
               <div style={{ flex: '1 1 150px' }}>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 700, marginBottom: 4, color: '#333' }}>
@@ -425,7 +429,7 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
                   step="0.01"
                   onChange={e => setAdditionalAmount(e.target.value)}
                   style={{ width: '100%', padding: '8px 10px', fontSize: 16, borderRadius: 6, border: '1.5px solid #aaa', boxSizing: 'border-box' }}
-                  autoFocus
+                  autoFocus={unlocked}
                 />
               </div>
               <div style={{ display: 'flex', gap: 16, paddingBottom: 4 }}>
@@ -441,7 +445,7 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
                 </label>
               </div>
             </div>
-            {(() => {
+            {unlocked && (() => {
               const total = existingBuyIn + (parseFloat(additionalAmount) || 0);
               return (
                 <p style={{ fontSize: 11, color: '#2e7d32', marginTop: 8, marginBottom: 0 }}>
@@ -456,7 +460,7 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
           </div>
         ) : (
           /* ── Normal signing mode: enter total collected ── */
-          <div style={{ border: '1.5px solid #2e7d32', borderRadius: 8, padding: '14px 16px', marginBottom: 20, background: '#f1f8e9' }}>
+          <div style={{ border: unlocked ? '1.5px solid #2e7d32' : '1.5px solid #bbb', borderRadius: 8, padding: '14px 16px', marginBottom: 20, background: unlocked ? '#f1f8e9' : '#fafafa' }}>
             <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'flex-end' }}>
               <div style={{ flex: '1 1 180px' }}>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 700, marginBottom: 4, color: '#333' }}>
@@ -472,7 +476,7 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
                   step="0.01"
                   onChange={e => setBuyInAmount(e.target.value)}
                   style={{ width: '100%', padding: '8px 10px', fontSize: 16, borderRadius: 6, border: !buyInAmount ? '1.5px solid #c00' : '1.5px solid #aaa', boxSizing: 'border-box' }}
-                  autoFocus
+                  autoFocus={unlocked}
                 />
               </div>
               <div style={{ display: 'flex', gap: 16, paddingBottom: 4 }}>
@@ -488,15 +492,17 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
                 </label>
               </div>
             </div>
-            <p style={{ fontSize: 11, color: '#2e7d32', marginTop: 8, marginBottom: 0 }}>
-              ✓ Fees unlocked &nbsp;·&nbsp;
-              {parseFloat(buyInAmount) >= entryFee
-                ? `$${parseFloat(buyInAmount).toFixed(2)} collected — Paid in Full`
-                : parseFloat(buyInAmount) > 0
-                  ? `$${parseFloat(buyInAmount).toFixed(2)} collected — Partial (min $${entryFee})`
-                  : <span style={{ color: '#c00' }}>Enter amount collected</span>}
-              {[lunkerChecked && ' · Lunker', optionChecked && ' · Option Pot'].filter(Boolean).join('')}
-            </p>
+            {unlocked && (
+              <p style={{ fontSize: 11, color: '#2e7d32', marginTop: 8, marginBottom: 0 }}>
+                ✓ Fees unlocked &nbsp;·&nbsp;
+                {parseFloat(buyInAmount) >= entryFee
+                  ? `$${parseFloat(buyInAmount).toFixed(2)} collected — Paid in Full`
+                  : parseFloat(buyInAmount) > 0
+                    ? `$${parseFloat(buyInAmount).toFixed(2)} collected — Partial (min $${entryFee})`
+                    : <span style={{ color: '#c00' }}>Enter amount collected</span>}
+                {[lunkerChecked && ' · Lunker', optionChecked && ' · Option Pot'].filter(Boolean).join('')}
+              </p>
+            )}
           </div>
         )}
 
@@ -659,6 +665,46 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
+            {feePreFilled && !unlocked && (
+              <div>
+                {!showPinInput ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowPinInput(true)}
+                    style={{
+                      width: '100%', padding: '10px 0', borderRadius: 6,
+                      border: '1.5px solid #bbb', background: '#f5f5f5',
+                      fontSize: 14, cursor: 'pointer', color: '#444', fontWeight: 600,
+                    }}
+                  >
+                    🔒 Enter Operator PIN to Submit
+                  </button>
+                ) : (
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <input
+                      ref={pinRef}
+                      type="text"
+                      inputMode="numeric"
+                      autoComplete="off"
+                      placeholder="Operator PIN"
+                      value={pinInput}
+                      onChange={e => { setPinInput(e.target.value); setPinError(''); }}
+                      onKeyDown={e => { if (e.key === 'Enter') tryUnlock(); if (e.key === 'Escape') { setShowPinInput(false); setPinInput(''); setPinError(''); } }}
+                      style={{ flex: 1, padding: '10px 12px', fontSize: 15, borderRadius: 6, border: pinError ? '1.5px solid #c00' : '1.5px solid #bbb', WebkitTextSecurity: 'disc' }}
+                    />
+                    <button type="button" onClick={tryUnlock}
+                      style={{ padding: '10px 18px', borderRadius: 6, border: 'none', background: '#1a5276', color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+                      Unlock
+                    </button>
+                    <button type="button" onClick={() => { setShowPinInput(false); setPinInput(''); setPinError(''); }}
+                      style={{ padding: '10px 12px', borderRadius: 6, border: '1px solid #bbb', background: '#eee', fontSize: 14, cursor: 'pointer' }}>
+                      ✕
+                    </button>
+                  </div>
+                )}
+                {pinError && <p style={{ color: '#c00', fontSize: 12, margin: '6px 0 0' }}>{pinError}</p>}
+              </div>
+            )}
             <div style={{ display: 'flex', gap: 12 }}>
               <button
                 type="button"

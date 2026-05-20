@@ -346,8 +346,8 @@ export default function WeighInTab({ entries, settings, onWeighIn, onAddEntry, o
         <div style={{ marginTop: 28 }}>
           <h3 style={{ color: 'var(--header-bg)', fontSize: 12, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>Recent</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {history.map((h, i) => (
-              <div key={i} onClick={() => loadHistory(h)}
+            {history.map((h) => (
+              <div key={h.boatNo} onClick={() => loadHistory(h)}
                 style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.04)', borderRadius: 8, padding: '8px 12px', fontSize: 13, cursor: 'pointer', userSelect: 'none' }}
                 title="Click to reload and edit">
                 <span style={{ fontWeight: 700, color: 'var(--gold-light)', minWidth: 50 }}>#{h.boatNo}</span>
