@@ -45,7 +45,7 @@ function toJS(row, hidePI = false) {
 export async function onRequestGet({ request, env }) {
   try {
     const db = getDb(env);
-    const hidePI = !checkAuth(request, env);
+    const hidePI = !checkOperatorAuth(request, env);
     const result = await db.execute('SELECT * FROM entries ORDER BY total_weight DESC, id ASC');
     return Response.json(result.rows.map(r => toJS(r, hidePI)));
   } catch (e) {

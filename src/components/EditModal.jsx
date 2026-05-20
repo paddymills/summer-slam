@@ -192,8 +192,11 @@ export default function EditModal({ entry, onSave, onCancel, settings, operatorM
             <div className="edit-section-label">Boater</div>
             {operatorMode ? (
               <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(139,180,225,0.18)', borderRadius: 8, padding: '10px 14px', marginBottom: 12, fontSize: 14, color: 'var(--white)' }}>
-                <span style={{ fontWeight: 700 }}>{form.boaterFirst} {form.boaterLast}{form.boaterSuffix ? ` ${form.boaterSuffix}` : ''}</span>
-                {form.boaterPhone && <span style={{ marginLeft: 12, color: 'var(--header-bg)', fontSize: 12 }}>{form.boaterPhone}</span>}
+                <div style={{ fontWeight: 700, marginBottom: 4 }}>{form.boaterFirst} {form.boaterLast}{form.boaterSuffix ? ` ${form.boaterSuffix}` : ''}</div>
+                <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 12, color: 'var(--header-bg)' }}>
+                  {form.boaterPhone && <span>{form.boaterPhone}</span>}
+                  {form.boaterEmail && <span>{form.boaterEmail}</span>}
+                </div>
               </div>
             ) : (
               <div className="edit-grid-2">
