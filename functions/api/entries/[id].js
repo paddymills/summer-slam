@@ -106,7 +106,25 @@ export async function onRequestPut({ params, request, env }) {
     }
 
     const updated = await db.execute({ sql: 'SELECT * FROM entries WHERE id = ?', args: [params.id] });
-    const after   = updated.rows[0];
+    let after = updated.rows[0];
+
+    // Auto-assign next boat number if draw has run and entry is now paid + signed without a number
+    if ((!after.boat_no || after.boat_no.trim() === '') && Number(after.paid) === 1 && Number(after.app_signed) === 1) {
+      try {
+        const drawCheck = await db.execute(
+          `SELECT MAX(CAST(boat_no AS REAL)) as maxNo FROM entries WHERE boat_no IS NOT NULL AND boat_no != '' AND id != ?`,
+          [params.id]
+        );
+        const maxNo = drawCheck.rows[0]?.maxNo;
+        if (maxNo != null && maxNo > 0) {
+          const nextNo = Math.floor(maxNo) + 1;
+          await db.execute({ sql: 'UPDATE entries SET boat_no = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', args: [String(nextNo), params.id] });
+          const refreshed = await db.execute({ sql: 'SELECT * FROM entries WHERE id = ?', args: [params.id] });
+          after = refreshed.rows[0];
+        }
+      } catch (_) {}
+    }
+
     const boaterName = [after.boater_first, after.boater_last, after.boater_suffix].filter(Boolean).join(' ');
     const afterBoat  = after.boat_no ?? '';
 

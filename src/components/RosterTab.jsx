@@ -84,7 +84,7 @@ export default function RosterTab({
   entries, settings, isUnlocked, isOperator, buyInBlurred,
   onEdit, onAdd, onDelete, onClearAll, onImport,
   onToggleOffWater, onToggleField, onUpdateInlineField,
-  onClearDeductions, onArchive, onSignApp,
+  onClearDeductions, onArchive, onSignApp, onDrawBoats,
 }) {
   const entryFee = parseFloat(settings.fees?.entryFee) || 249;
   const offWater = settings.offWater || {};
@@ -107,6 +107,8 @@ export default function RosterTab({
   const [confirmAction, setConfirmAction] = useState(null);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [actionsPos, setActionsPos]   = useState({ top: 0, right: 0, bottom: 'auto' });
+  const [drawModal, setDrawModal]     = useState(false);
+  const [drawBusy, setDrawBusy]       = useState(false);
   const tableContainerRef = useRef(null);
   const actionsRef        = useRef(null);
 
@@ -747,6 +749,10 @@ export default function RosterTab({
           {globalFilter.text && <span style={{ opacity: 0.65 }}>{` (${filteredCount} shown)`}</span>}
         </button>
 
+        <button className="btn btn-outline" onClick={() => setDrawModal(true)} style={{ fontSize: 13 }}>
+          🎲 Assign Boat #'s
+        </button>
+
         <div style={{ flex: 1 }} />
 
         <input
@@ -923,6 +929,58 @@ export default function RosterTab({
           </>
         );
       })()}
+
+      {drawModal && (
+        <>
+          <div onClick={() => !drawBusy && setDrawModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 2000 }} />
+          <div style={{
+            position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
+            zIndex: 2001, background: 'var(--card-bg, #1a2a3a)', border: '1px solid rgba(255,180,80,0.4)',
+            borderRadius: 14, padding: '28px 32px', width: 'min(440px, 92vw)', boxShadow: '0 12px 48px rgba(0,0,0,0.6)',
+          }}>
+            <div style={{ fontSize: 19, fontWeight: 800, marginBottom: 10 }}>🎲 Assign Boat Numbers</div>
+            <div style={{ fontSize: 14, color: 'var(--header-bg)', lineHeight: 1.65, marginBottom: 20 }}>
+              <strong style={{ color: 'var(--white)' }}>Re-draw All</strong> randomly shuffles all{' '}
+              <strong style={{ color: 'var(--gold-light)' }}>{registeredCount}</strong> paid + signed entries and assigns boat numbers 1–{registeredCount}.
+              Existing boat numbers will be overwritten.
+              <br /><br />
+              <strong style={{ color: 'var(--white)' }}>Assign Missing Only</strong> leaves existing boat numbers in place and assigns sequential numbers only to entries that don't have one yet.
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <button
+                className="btn btn-gold"
+                disabled={drawBusy}
+                style={{ width: '100%', fontSize: 15, padding: '11px 0' }}
+                onClick={async () => {
+                  setDrawBusy(true);
+                  try { await onDrawBoats?.('redraw'); } finally { setDrawBusy(false); setDrawModal(false); }
+                }}
+              >
+                {drawBusy ? 'Drawing…' : 'Re-draw All'}
+              </button>
+              <button
+                className="btn btn-outline"
+                disabled={drawBusy}
+                style={{ width: '100%', fontSize: 15, padding: '11px 0' }}
+                onClick={async () => {
+                  setDrawBusy(true);
+                  try { await onDrawBoats?.('missing'); } finally { setDrawBusy(false); setDrawModal(false); }
+                }}
+              >
+                Assign Missing Only
+              </button>
+              <button
+                className="btn btn-outline"
+                disabled={drawBusy}
+                style={{ width: '100%', fontSize: 13, opacity: 0.7 }}
+                onClick={() => setDrawModal(false)}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </>
+      )}
 
       {confirmAction && (
         <ConfirmActionModal

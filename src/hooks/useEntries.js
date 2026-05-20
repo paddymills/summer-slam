@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   fetchEntries, createEntry, updateEntry, deleteEntry,
   clearWeighLog, clearSignUpLog, clearCheckInLog, clearCheckOutLog,
-  clearAllEntries, createEntriesBulk,
+  clearAllEntries, createEntriesBulk, drawBoats,
 } from '../utils/api';
 import { CONTACTS_KEY } from './useContacts';
 
@@ -149,6 +149,14 @@ export function useCreateEntriesBulk() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: createEntriesBulk,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ENTRIES_KEY }),
+  });
+}
+
+export function useDrawBoats() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ mode }) => drawBoats(mode),
     onSuccess: () => qc.invalidateQueries({ queryKey: ENTRIES_KEY }),
   });
 }

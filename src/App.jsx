@@ -20,7 +20,7 @@ import { verifyPassword, storePassword, storeLevel, clearPassword, isPasswordSto
 import WaiverModal from './components/WaiverModal';
 import { contactsToSigs } from './utils/printWaivers';
 import { calcRanks } from './utils/calculations';
-import { useEntries, useCreateEntry, useUpdateEntry, useDeleteEntry, useClearWeighLog, useClearSignUpLog, useClearCheckInLog, useClearCheckOutLog, useClearAllEntries, useCreateEntriesBulk } from './hooks/useEntries';
+import { useEntries, useCreateEntry, useUpdateEntry, useDeleteEntry, useClearWeighLog, useClearSignUpLog, useClearCheckInLog, useClearCheckOutLog, useClearAllEntries, useCreateEntriesBulk, useDrawBoats } from './hooks/useEntries';
 import { useSettings, useSaveSettings } from './hooks/useSettings';
 import { useContacts, useUpdateContact, useDeleteContact, useUpsertContacts } from './hooks/useContacts';
 
@@ -104,6 +104,7 @@ export default function App() {
   const clearCheckOutLogMut = useClearCheckOutLog();
   const clearAllMut       = useClearAllEntries();
   const bulkCreateMut     = useCreateEntriesBulk();
+  const drawBoatsMut      = useDrawBoats();
 const saveSettingsMut   = useSaveSettings();
   const updateContactMut  = useUpdateContact();
   const deleteContactMut  = useDeleteContact();
@@ -474,6 +475,20 @@ const saveSettingsMut   = useSaveSettings();
     }
   }
 
+  async function handleDrawBoats(mode) {
+    try {
+      const result = await drawBoatsMut.mutateAsync({ mode });
+      showToast(
+        result.count === 0
+          ? 'No entries needed assignment'
+          : `Boat #s assigned to ${result.count} ${result.count === 1 ? 'entry' : 'entries'}`,
+        'success'
+      );
+    } catch (e) {
+      showToast(`Boat draw failed: ${e.message}`, 'error');
+    }
+  }
+
   async function handleLoadArchive(archivedEntries) {
     if (rawEntries.length > 0) {
       showToast('Clear the roster first before loading an archive', 'error');
@@ -606,6 +621,7 @@ const saveSettingsMut   = useSaveSettings();
             onClearDeductions={handleClearDeductions}
             onArchive={handleArchive}
             onSignApp={handleOpenSignApp}
+            onDrawBoats={handleDrawBoats}
           />
         </div>
         <div style={{ display: activeTab === 'leaderboard' ? 'contents' : 'none' }}>

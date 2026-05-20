@@ -98,7 +98,23 @@ export async function onRequestPost({ request, env }) {
       ],
     });
 
-    const newId  = Number(result.lastInsertRowid);
+    const newId = Number(result.lastInsertRowid);
+
+    // Auto-assign next boat number if draw has run and new entry is paid + signed (best-effort)
+    if (Number(body.paid) === 1 && Number(body.appSigned) === 1) {
+      try {
+        const drawCheck = await db.execute(
+          `SELECT MAX(CAST(boat_no AS REAL)) as maxNo FROM entries WHERE boat_no IS NOT NULL AND boat_no != '' AND id != ?`,
+          [newId]
+        );
+        const maxNo = drawCheck.rows[0]?.maxNo;
+        if (maxNo != null && maxNo > 0) {
+          const nextNo = Math.floor(maxNo) + 1;
+          await db.execute({ sql: 'UPDATE entries SET boat_no = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?', args: [String(nextNo), newId] });
+        }
+      } catch (_) {}
+    }
+
     const newRow = await db.execute({ sql: 'SELECT * FROM entries WHERE id = ?', args: [newId] });
 
     // Write signup event (best-effort — don't fail the request if it errors)

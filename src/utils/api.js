@@ -289,6 +289,16 @@ export async function clearAllEntries() {
   if (!res.ok) throw new Error('Failed to clear entries');
 }
 
+export async function drawBoats(mode) {
+  const res = await fetchWithTimeout(`${BASE}/entries/draw`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ mode }),
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Boat draw failed');
+  return res.json(); // { count, mode }
+}
+
 export async function createEntriesBulk(entries) {
   const res = await fetchWithTimeout(`${BASE}/entries/bulk`, {
     method: 'POST',
