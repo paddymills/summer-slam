@@ -1,8 +1,10 @@
 import { useState, useRef } from 'react';
 import ContactSuggest from './ContactSuggest';
 import EmailInput from './EmailInput';
+import WaiverModal from './WaiverModal';
 import { formatPhone } from '../utils/phone';
-import { evalMath } from '../utils/evalMath';
+import { fetchContactsWithSignatures } from '../utils/api';
+import { printAllWaivers, viewWaiverForEntry, contactsToSigs } from '../utils/printWaivers';
 
 const FIELD = {
   background: 'rgba(255,255,255,0.06)',
@@ -40,56 +42,33 @@ const SUFFIX_STYLE = {
 const EMPTY = {
   boaterFirst: '', boaterLast: '', boaterSuffix: '', boaterPhone: '', boaterEmail: '',
   coAnglerFirst: '', coAnglerLast: '', coAnglerSuffix: '', coAnglerPhone: '', coAnglerEmail: '',
-  lunker: '', option: '', paid: '', appSigned: '', buyIn: '',
 };
 
-function ToggleButton({ value, onChange }) {
-  const isYes = value === 1 || value === '1';
-  const isNo  = value === 0 || value === '0';
-  function next() {
-    if (isYes) onChange(0);
-    else if (isNo) onChange('');
-    else onChange(1);
-  }
-  return (
-    <button
-      type="button"
-      onClick={next}
-      style={{
-        width: '100%', minHeight: 44, boxSizing: 'border-box',
-        padding: '10px 14px', borderRadius: 8, cursor: 'pointer',
-        fontSize: 15, fontWeight: 700,
-        border: `1px solid ${isYes ? 'rgba(76,175,80,0.5)' : isNo ? 'rgba(255,107,107,0.5)' : 'rgba(139,180,225,0.3)'}`,
-        background: isYes ? 'rgba(76,175,80,0.15)' : isNo ? 'rgba(255,107,107,0.15)' : 'rgba(255,255,255,0.06)',
-        color: isYes ? '#4CAF50' : isNo ? '#ff6b6b' : 'var(--header-bg)',
-      }}
-    >
-      {isYes ? '✓ Yes' : isNo ? '✗ No' : '—'}
-    </button>
-  );
-}
+export default function SignUpTab({ onAddEntry, settings, entries = [], onEntriesRefresh }) {
+  const entryFee = parseFloat(settings?.fees?.entryFee) || 250;
+  const lunkerFee = parseFloat(settings?.fees?.lunkerFee) || 10;
+  const optFee    = parseFloat(settings?.fees?.optFee)    || 20;
 
-export default function SignUpTab({ onAddEntry, settings }) {
-  const entryFee = parseFloat(settings?.fees?.entryFee) || 249;
   const [form, setForm]         = useState({ ...EMPTY });
   const [errors, setErrors]     = useState({});
   const [recent, setRecent]     = useState([]);
   const [submitting, setSubmitting] = useState(false);
+  const [pendingWaiver,  setPendingWaiver]  = useState(null);
+  const [printing,       setPrinting]       = useState(false);
+  const [openingWaiver,  setOpeningWaiver]  = useState(null); // entry id being loaded
+
+  // Entry fee fields (shared by paper copy and digital pre-fill)
+  const [feeAmount, setFeeAmount] = useState('');
+  const [feeLunker, setFeeLunker] = useState(false);
+  const [feeOption, setFeeOption] = useState(false);
+  const [paperCopy, setPaperCopy] = useState(false);
+
   const boaterFirstRef      = useRef(null);
   const boaterContactIdRef  = useRef(null);
   const coAnglerContactIdRef = useRef(null);
 
   function set(field, val) {
-    setForm(prev => {
-      const next = { ...prev, [field]: val };
-      if (field === 'buyIn') {
-        const amount = parseFloat(evalMath(String(val)));
-        if (!isNaN(amount) && amount > 0) {
-          next.paid = amount >= entryFee ? 1 : 0;
-        }
-      }
-      return next;
-    });
+    setForm(prev => ({ ...prev, [field]: val }));
     if (errors[field]) setErrors(prev => ({ ...prev, [field]: null }));
   }
 
@@ -104,7 +83,7 @@ export default function SignUpTab({ onAddEntry, settings }) {
       if (!form.coAnglerLast.trim())  errs.coAnglerLast  = 'Required';
       if (!form.coAnglerPhone.trim()) errs.coAnglerPhone  = 'Required';
     }
-    if (String(form.buyIn).trim() && isNaN(evalMath(form.buyIn))) errs.buyIn = 'Invalid expression';
+    if (paperCopy && (!feeAmount || parseFloat(feeAmount) <= 0)) errs.feeAmount = 'Required for paper copy';
     return errs;
   }
 
@@ -113,47 +92,83 @@ export default function SignUpTab({ onAddEntry, settings }) {
     const errs = validate();
     if (Object.keys(errs).length) { setErrors(errs); return; }
 
+    const boaterCid    = boaterContactIdRef.current;
+    const coAnglerCid  = coAnglerContactIdRef.current;
+
+    const buyInNum = parseFloat(feeAmount) || 0;
+    const paid     = buyInNum >= entryFee ? 1 : 0;
+
     const entry = {
       boaterFirst:    form.boaterFirst.trim(),
       boaterLast:     form.boaterLast.trim(),
       boaterSuffix:   form.boaterSuffix,
-      boaterPhone:    form.boaterPhone.trim(),
+      boaterPhone:    formatPhone(form.boaterPhone.trim()),
       boaterEmail:    form.boaterEmail.trim(),
       coAnglerFirst:  form.coAnglerFirst.trim(),
       coAnglerLast:   form.coAnglerLast.trim(),
       coAnglerSuffix: form.coAnglerSuffix,
-      coAnglerPhone:  form.coAnglerPhone.trim(),
+      coAnglerPhone:  formatPhone(form.coAnglerPhone.trim()),
       coAnglerEmail:  form.coAnglerEmail.trim(),
-      lunker:    form.lunker    === '' ? '' : parseInt(form.lunker),
-      option:    form.option    === '' ? '' : parseInt(form.option),
-      paid:      form.paid      === '' ? '' : parseInt(form.paid),
-      appSigned: form.appSigned === '' ? '' : parseInt(form.appSigned),
-      buyIn:     parseFloat((evalMath(form.buyIn) || 0).toFixed(2)),
+      lunker: feeLunker ? 1 : 0,
+      option: feeOption ? 1 : 0,
+      paid:      paperCopy ? paid : 0,
+      appSigned: paperCopy ? 1    : 0,
+      buyIn: buyInNum,
       boatNo: '', numFish: 0, lunkerWeight: 0, totalWeight: 0,
-      boaterContactId:   boaterContactIdRef.current  ?? null,
-      coAnglerContactId: coAnglerContactIdRef.current ?? null,
+      boaterContactId:   boaterCid  ?? null,
+      coAnglerContactId: coAnglerCid ?? null,
     };
 
     setSubmitting(true);
-    const ok = await onAddEntry(entry);
+    const created = await onAddEntry(entry);
     setSubmitting(false);
 
-    if (ok) {
-      setRecent(prev => [entry, ...prev].slice(0, 10));
+    if (created) {
+      setRecent(prev => [{ ...entry, id: created.id }, ...prev].slice(0, 10));
       setForm({ ...EMPTY });
       setErrors({});
+      setFeeAmount('');
+      setFeeLunker(false);
+      setFeeOption(false);
+      setPaperCopy(false);
       boaterContactIdRef.current  = null;
       coAnglerContactIdRef.current = null;
-      setTimeout(() => boaterFirstRef.current?.focus(), 0);
+      if (!paperCopy) {
+        setPendingWaiver({
+          entry:            created,
+          boaterContactId:  boaterCid,
+          coAnglerContactId: coAnglerCid,
+        });
+      }
     }
   }
 
   function handleClear() {
     setForm({ ...EMPTY });
     setErrors({});
+    setFeeAmount('');
+    setFeeLunker(false);
+    setFeeOption(false);
+    setPaperCopy(false);
     boaterContactIdRef.current  = null;
     coAnglerContactIdRef.current = null;
     setTimeout(() => boaterFirstRef.current?.focus(), 0);
+  }
+
+  async function openSignApplication(entry) {
+    setOpeningWaiver(entry.id);
+    try {
+      const contacts = await fetchContactsWithSignatures();
+      const { boaterSig, coaSig } = contactsToSigs(entry, contacts);
+      setPendingWaiver({
+        entry,
+        boaterContactId: null,
+        coAnglerContactId: null,
+        prefillSigs: { boater: boaterSig, coAngler: coaSig },
+      });
+    } finally {
+      setOpeningWaiver(null);
+    }
   }
 
   const err = (field) => errors[field]
@@ -169,6 +184,26 @@ export default function SignUpTab({ onAddEntry, settings }) {
       <div className="tab-scroll">
       <div className="toolbar">
         <h2 style={{ color: 'var(--gold-light)', fontSize: 18, fontWeight: 800 }}>📝 Sign Up</h2>
+        {entries.some(e => e.appSigned === 1) && (
+          <button
+            type="button"
+            className="btn btn-outline"
+            disabled={printing}
+            onClick={async () => {
+              setPrinting(true);
+              try {
+                const contacts = await fetchContactsWithSignatures();
+                const signed = entries.filter(e => e.appSigned === 1);
+                printAllWaivers(signed, contacts, settings);
+              } finally {
+                setPrinting(false);
+              }
+            }}
+            style={{ fontSize: 13 }}
+          >
+            {printing ? 'Loading…' : '🖨 Print All Applications'}
+          </button>
+        )}
       </div>
       <div style={{ maxWidth: 520, margin: '0 auto', paddingTop: 16 }}>
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }} noValidate>
@@ -272,32 +307,64 @@ export default function SignUpTab({ onAddEntry, settings }) {
           </div>
         </div>
 
-        {/* ── Buy-In Amount ── */}
-        <div>
-          <div style={SECTION}>Buy-In Amount</div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 10, marginBottom: 10 }}>
-            {[
-              { key: 'lunker',    label: 'Lunker'    },
-              { key: 'option',    label: 'Option'    },
-              { key: 'paid',      label: 'Paid'      },
-              { key: 'appSigned', label: 'App Signed' },
-            ].map(({ key, label }) => (
-              <div key={key}>
-                <span style={LABEL}>{label}</span>
-                <ToggleButton value={form[key]} onChange={v => set(key, v)} />
-              </div>
-            ))}
-          </div>
-          <div>
-            <label htmlFor="su-buy-in" style={LABEL}>Amount ($)</label>
-            <input id="su-buy-in" name="buyIn" type="text" inputMode="decimal" value={form.buyIn} placeholder="0.00"
-                   onChange={e => set('buyIn', e.target.value)}
-                   onBlur={e => {
-                     const result = evalMath(e.target.value);
-                     if (!isNaN(result)) set('buyIn', parseFloat(result.toFixed(2)));
-                   }}
-                   style={fieldBorder('buyIn')} />
-            {err('buyIn')}
+        {/* ── Entry Fees ── */}
+        <div style={{ borderRadius: 8, border: '1px solid rgba(139,180,225,0.25)', background: 'rgba(255,255,255,0.03)', padding: '14px 16px' }}>
+          <div style={{ ...SECTION, marginBottom: 12 }}>Entry Fees</div>
+
+          {/* Paper copy toggle */}
+          <label style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, cursor: 'pointer', userSelect: 'none' }}>
+            <input
+              type="checkbox"
+              checked={paperCopy}
+              onChange={e => setPaperCopy(e.target.checked)}
+              style={{ width: 18, height: 18, cursor: 'pointer', accentColor: '#e8c876' }}
+            />
+            <span style={{ fontSize: 14, fontWeight: 700, color: paperCopy ? 'var(--gold-light)' : 'var(--header-bg)' }}>
+              Paper Application on File
+            </span>
+            {paperCopy && (
+              <span style={{ fontSize: 11, color: 'var(--gold-light)', opacity: 0.8 }}>— no digital signature needed</span>
+            )}
+          </label>
+
+          {/* Fee fields */}
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <div style={{ flex: '1 1 160px' }}>
+              <label style={LABEL}>
+                Buy-In Amount ($){paperCopy ? ' *' : ''}
+                {!paperCopy && <span style={{ fontWeight: 400, opacity: 0.6, marginLeft: 4 }}>(optional — pre-fills digital app)</span>}
+              </label>
+              <input
+                type="number"
+                inputMode="decimal"
+                value={feeAmount}
+                placeholder={paperCopy ? 'Required' : '0.00'}
+                min="0"
+                step="0.01"
+                onChange={e => { setFeeAmount(e.target.value); if (errors.feeAmount) setErrors(p => ({ ...p, feeAmount: null })); }}
+                style={{
+                  ...FIELD,
+                  borderColor: errors.feeAmount ? '#ff6b6b' : feeAmount ? 'rgba(139,180,225,0.5)' : undefined,
+                  color: feeAmount ? 'var(--white)' : undefined,
+                }}
+              />
+              {errors.feeAmount && <div style={{ fontSize: 11, color: '#ff6b6b', marginTop: 3 }}>{errors.feeAmount}</div>}
+              {feeAmount > 0 && (
+                <div style={{ fontSize: 11, color: parseFloat(feeAmount) >= entryFee ? '#6fcf97' : '#f0ad4e', marginTop: 3 }}>
+                  {parseFloat(feeAmount) >= entryFee ? '✓ Paid in Full' : `Partial — min $${entryFee}`}
+                </div>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: 16, paddingBottom: 4 }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, fontWeight: 600, cursor: 'pointer', userSelect: 'none', color: 'var(--white)' }}>
+                <input type="checkbox" checked={feeLunker} onChange={e => setFeeLunker(e.target.checked)} style={{ width: 16, height: 16, cursor: 'pointer', accentColor: '#e8c876' }} />
+                Lunker (${lunkerFee})
+              </label>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, fontWeight: 600, cursor: 'pointer', userSelect: 'none', color: 'var(--white)' }}>
+                <input type="checkbox" checked={feeOption} onChange={e => setFeeOption(e.target.checked)} style={{ width: 16, height: 16, cursor: 'pointer', accentColor: '#e8c876' }} />
+                Option (${optFee})
+              </label>
+            </div>
           </div>
         </div>
 
@@ -305,7 +372,7 @@ export default function SignUpTab({ onAddEntry, settings }) {
         <div style={{ display: 'flex', gap: 10 }}>
           <button type="submit" className="btn btn-gold" disabled={submitting}
                   style={{ flex: 1, fontSize: 16, padding: '12px 0' }}>
-            {submitting ? 'Saving…' : '+ Sign Up'}
+            {submitting ? 'Saving…' : paperCopy ? '+ Sign Up (Paper)' : '+ Sign Up'}
           </button>
           <button type="button" className="btn btn-outline" onClick={handleClear}
                   style={{ padding: '12px 20px' }}>
@@ -339,22 +406,161 @@ export default function SignUpTab({ onAddEntry, settings }) {
                     / {[r.coAnglerFirst, r.coAnglerLast, r.coAnglerSuffix].filter(Boolean).join(' ')}
                   </span>
                 )}
-                <span style={{ color: 'var(--gold-light)', fontSize: 12, marginLeft: 8, whiteSpace: 'nowrap' }}>
-                  {[
-                    r.lunker    === 1 && 'L',
-                    r.option    === 1 && 'O',
-                    r.paid      === 1 && 'P',
-                    r.appSigned === 1 && '✓',
-                  ].filter(Boolean).join(' · ')}
-                  {r.buyIn > 0 ? `  $${parseFloat(r.buyIn).toFixed(2)}` : ''}
-                </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 8 }}>
+                  {r.appSigned === 1 ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ color: 'var(--gold-light)', fontSize: 12, whiteSpace: 'nowrap' }}>
+                        ✓ Signed{r.buyIn > 0 ? `  ·  $${parseFloat(r.buyIn).toFixed(2)}` : ''}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => viewWaiverForEntry(r, settings, fetchContactsWithSignatures)}
+                        style={{ padding: '3px 10px', fontSize: 11, cursor: 'pointer', background: 'rgba(139,180,225,0.15)', color: 'var(--header-bg)', border: '1px solid rgba(139,180,225,0.3)', borderRadius: 5, fontWeight: 600, whiteSpace: 'nowrap' }}
+                      >
+                        View
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <span style={{ color: '#f0ad4e', fontSize: 12, whiteSpace: 'nowrap' }}>— Pending</span>
+                      <button
+                        type="button"
+                        disabled={openingWaiver === r.id}
+                        onClick={() => openSignApplication(r)}
+                        style={{
+                          padding: '3px 10px', fontSize: 11, cursor: openingWaiver === r.id ? 'not-allowed' : 'pointer',
+                          background: '#1a5276', color: '#fff', border: 'none',
+                          borderRadius: 5, fontWeight: 600, whiteSpace: 'nowrap', opacity: openingWaiver === r.id ? 0.6 : 1,
+                        }}
+                      >
+                        {openingWaiver === r.id ? 'Loading…' : 'Sign Application'}
+                      </button>
+                    </>
+                  )}
+                </div>
               </div>
             ))}
           </div>
         </div>
       )}
+      {/* ── Fees Needed (signed but not paid — fee entry pending) ── */}
+      {(() => {
+        const recentIds  = new Set(recent.map(r => r.id));
+        const feesNeeded = entries
+          .filter(e => e.appSigned === 1 && !(e.paid === 1 || e.paid === '1') && !recentIds.has(e.id))
+          .sort((a, b) => (b.signedUpAt ?? '').localeCompare(a.signedUpAt ?? ''));
+        if (!feesNeeded.length) return null;
+        return (
+          <div style={{ marginTop: 28 }}>
+            <h3 style={{ color: '#f0ad4e', fontSize: 12, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>
+              ⚠ Fees Needed ({feesNeeded.length})
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {feesNeeded.map(r => (
+                <div key={r.id} style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  background: 'rgba(240,173,78,0.07)', borderRadius: 8,
+                  border: '1px solid rgba(240,173,78,0.35)',
+                  padding: '8px 12px', fontSize: 13,
+                }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <span style={{ fontWeight: 700, color: 'var(--white)' }}>
+                      {[r.boaterFirst, r.boaterLast, r.boaterSuffix].filter(Boolean).join(' ')}
+                    </span>
+                    {(r.coAnglerFirst || r.coAnglerLast) && (
+                      <span style={{ color: 'var(--header-bg)', fontSize: 12 }}>
+                        / {[r.coAnglerFirst, r.coAnglerLast, r.coAnglerSuffix].filter(Boolean).join(' ')}
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    disabled={openingWaiver === r.id}
+                    onClick={() => openSignApplication(r)}
+                    style={{
+                      padding: '4px 12px', fontSize: 11, cursor: openingWaiver === r.id ? 'not-allowed' : 'pointer',
+                      background: '#c67c00', color: '#fff', border: 'none',
+                      borderRadius: 5, fontWeight: 600, whiteSpace: 'nowrap', marginLeft: 8,
+                      opacity: openingWaiver === r.id ? 0.6 : 1,
+                    }}
+                  >
+                    {openingWaiver === r.id ? 'Loading…' : 'Enter Fee'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* ── Pending Applications (DB-backed, survives refresh) ── */}
+      {(() => {
+        const recentIds = new Set(recent.map(r => r.id));
+        const pendingDb = entries
+          .filter(e => e.appSigned === 0 && !recentIds.has(e.id))
+          .sort((a, b) => (b.signedUpAt ?? '').localeCompare(a.signedUpAt ?? ''));
+        if (!pendingDb.length) return null;
+        return (
+          <div style={{ marginTop: 28 }}>
+            <h3 style={{ color: '#f0ad4e', fontSize: 12, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>
+              Pending Applications ({pendingDb.length})
+            </h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {pendingDb.map(r => (
+                <div key={r.id} style={{
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                  background: 'rgba(240,173,78,0.07)', borderRadius: 8,
+                  border: '1px solid rgba(240,173,78,0.25)',
+                  padding: '8px 12px', fontSize: 13,
+                }}>
+                  <span style={{ fontWeight: 700, color: 'var(--white)' }}>
+                    {[r.boaterFirst, r.boaterLast, r.boaterSuffix].filter(Boolean).join(' ')}
+                  </span>
+                  {(r.coAnglerFirst || r.coAnglerLast) && (
+                    <span style={{ flex: 1, color: 'var(--header-bg)', marginLeft: 8 }}>
+                      / {[r.coAnglerFirst, r.coAnglerLast, r.coAnglerSuffix].filter(Boolean).join(' ')}
+                    </span>
+                  )}
+                  <button
+                    type="button"
+                    disabled={openingWaiver === r.id}
+                    onClick={() => openSignApplication(r)}
+                    style={{
+                      padding: '4px 12px', fontSize: 11, cursor: openingWaiver === r.id ? 'not-allowed' : 'pointer',
+                      background: '#1a5276', color: '#fff', border: 'none',
+                      borderRadius: 5, fontWeight: 600, whiteSpace: 'nowrap', marginLeft: 8,
+                      opacity: openingWaiver === r.id ? 0.6 : 1,
+                    }}
+                  >
+                    {openingWaiver === r.id ? 'Loading…' : 'Sign Application'}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
       </div>
       </div>
+
+      {pendingWaiver && (
+        <WaiverModal
+          entry={pendingWaiver.entry}
+          boaterContactId={pendingWaiver.boaterContactId}
+          coAnglerContactId={pendingWaiver.coAnglerContactId}
+          prefillSigs={pendingWaiver.prefillSigs ?? null}
+          settings={settings}
+          onClose={(result) => {
+            if (result?.appSigned) {
+              setRecent(prev => prev.map(r =>
+                r.id === pendingWaiver.entry.id ? { ...r, appSigned: 1, buyIn: result.buyIn, lunker: result.lunker, option: result.option, paid: result.paid } : r
+              ));
+              onEntriesRefresh?.();
+            }
+            setPendingWaiver(null);
+          }}
+        />
+      )}
     </div>
   );
 }

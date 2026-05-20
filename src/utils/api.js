@@ -195,6 +195,14 @@ export async function fetchContacts() {
   } catch { return []; }
 }
 
+export async function fetchContactsWithSignatures() {
+  try {
+    const res = await fetchWithTimeout(`${BASE}/contacts?signatures=1`, { headers: authHeaders() });
+    if (!res.ok) return [];
+    return res.json();
+  } catch { return []; }
+}
+
 export async function updateContact(id, { firstName, lastName, phone, email }) {
   const res = await fetchWithTimeout(`${BASE}/contacts/${id}`, {
     method: 'PUT',
@@ -211,6 +219,29 @@ export async function deleteContact(id) {
     headers: authHeaders(),
   });
   if (!res.ok) throw new Error('Failed to delete contact');
+}
+
+export async function saveContactWaiver(id, { signature, signedAt, waiverYear, waiverSnapshot }) {
+  const res = await fetchWithTimeout(`${BASE}/contacts/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...authHeaders() },
+    body: JSON.stringify({ signature, signedAt, waiverYear, waiverSnapshot }),
+  });
+  if (!res.ok) throw new Error('Failed to save waiver');
+}
+
+export async function lookupContactId(firstName, lastName, phone) {
+  const q = `${firstName} ${lastName}`.trim();
+  const contacts = await searchContacts(q);
+  if (!contacts.length) return null;
+  const norm = s => (s || '').replace(/\D/g, '');
+  const phoneDigits = norm(phone);
+  const exact = contacts.find(c =>
+    c.firstName.toLowerCase() === firstName.toLowerCase() &&
+    c.lastName.toLowerCase()  === lastName.toLowerCase()  &&
+    (phoneDigits ? norm(c.phone) === phoneDigits : true)
+  );
+  return (exact ?? contacts[0])?.id ?? null;
 }
 
 export async function searchContacts(q) {

@@ -22,8 +22,9 @@ export default function SettingsTab({ settings, entries, isUnlocked, onUpdateSet
   const [showSignUpLog, setShowSignUpLog]   = useState(false);
   const [showCheckInLog, setShowCheckInLog] = useState(false);
   const [showOffWaterLog, setShowOffWaterLog] = useState(false);
-  const [tournamentDate, setTournamentDate] = useState(settings.tournamentDate || '');
-  const [checkInOpens, setCheckInOpens]     = useState(settings.checkInOpens || '04:00');
+  const [tournamentDate,     setTournamentDate]     = useState(settings.tournamentDate     || '');
+  const [tournamentLocation, setTournamentLocation] = useState(settings.tournamentLocation || '');
+  const [checkInOpens, setCheckInOpens]             = useState(settings.checkInOpens       || '04:00');
   const [localFlights, setLocalFlights]     = useState(() => (settings.flights || []).map((f, i) => ({ ...f, _key: i })));
   const [localPresets, setLocalPresets]     = useState(settings.payoutPresets || []);
   const [editingFlightIdx, setEditingFlightIdx] = useState(null);
@@ -44,8 +45,9 @@ export default function SettingsTab({ settings, entries, isUnlocked, onUpdateSet
     setRawInputs((payoutSettings.payouts || []).map(v => String(v || 0)));
   }, [payoutSettings]);
 
-  useEffect(() => { setTournamentDate(settings.tournamentDate || ''); }, [settings.tournamentDate]);
-  useEffect(() => { setCheckInOpens(settings.checkInOpens || '04:00'); }, [settings.checkInOpens]);
+  useEffect(() => { setTournamentDate(settings.tournamentDate         || ''); }, [settings.tournamentDate]);
+  useEffect(() => { setTournamentLocation(settings.tournamentLocation || ''); }, [settings.tournamentLocation]);
+  useEffect(() => { setCheckInOpens(settings.checkInOpens             || '04:00'); }, [settings.checkInOpens]);
   useEffect(() => { setDefaultFlightSize(parseInt(settings.defaultFlightSize) || 30); }, [settings.defaultFlightSize]);
   useEffect(() => { setLocalFees(fees); }, [fees]);
   useEffect(() => { setLocalPenalties(penalties); }, [penalties]);
@@ -428,6 +430,19 @@ export default function SettingsTab({ settings, entries, isUnlocked, onUpdateSet
               {new Date(tournamentDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
             </p>
           )}
+          <div className="form-field" style={{ maxWidth: 360, marginTop: 14, margin: '14px auto 0' }}>
+            <label htmlFor="st-tournament-location">Tournament Location</label>
+            <input
+              id="st-tournament-location"
+              name="tournamentLocation"
+              type="text"
+              value={tournamentLocation}
+              placeholder="e.g. North East River Anchor Marina, MD"
+              disabled={locked}
+              onChange={e => setTournamentLocation(e.target.value)}
+              onBlur={() => onUpdateSettings({ tournamentLocation })}
+            />
+          </div>
           <div className="form-field" style={{ maxWidth: 220, marginTop: 14, margin: '14px auto 0' }}>
             <label htmlFor="st-checkin-opens">Check-In Opens</label>
             <input

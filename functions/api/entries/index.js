@@ -1,5 +1,5 @@
 import { createClient } from '@libsql/client/web';
-import { checkAuth } from '../_auth.js';
+import { checkAuth, checkOperatorAuth } from '../_auth.js';
 
 function getDb(env) {
   return createClient({
@@ -65,7 +65,7 @@ export async function onRequestDelete({ request, env }) {
 }
 
 export async function onRequestPost({ request, env }) {
-  if (!checkAuth(request, env)) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!checkOperatorAuth(request, env)) return Response.json({ error: 'Unauthorized' }, { status: 401 });
   try {
     const db   = getDb(env);
     const body = await request.json();

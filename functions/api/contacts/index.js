@@ -1,12 +1,13 @@
 import { createClient } from '@libsql/client/web';
-import { checkAuth } from '../_auth.js';
+import { checkAuth, checkOperatorAuth } from '../_auth.js';
 
 function getDb(env) {
   return createClient({ url: env.TURSO_DATABASE_URL, authToken: env.TURSO_AUTH_TOKEN });
 }
 
 function formatPhone(raw) {
-  const digits = (raw || '').replace(/\D/g, '');
+  let digits = (raw || '').replace(/\D/g, '');
+  if (digits.length === 11 && digits[0] === '1') digits = digits.slice(1);
   if (digits.length === 10) return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
   if (digits.length === 7)  return `${digits.slice(0, 3)}-${digits.slice(3)}`;
   if (digits.length === 6)  return `${digits.slice(0, 3)}-${digits.slice(3)}`;
@@ -14,34 +15,40 @@ function formatPhone(raw) {
 }
 
 export async function onRequestGet({ request, env }) {
-  if (!checkAuth(request, env)) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!checkOperatorAuth(request, env)) return Response.json({ error: 'Unauthorized' }, { status: 401 });
   try {
-    const q = new URL(request.url).searchParams.get('q') || '';
-    const db = getDb(env);
+    const url      = new URL(request.url);
+    const q        = url.searchParams.get('q') || '';
+    const withSigs = url.searchParams.get('signatures') === '1';
+    const db       = getDb(env);
+    const extra    = withSigs ? ', signature, waiver_snapshot' : '';
     let result;
     if (q.length >= 2) {
       const like = `%${q}%`;
       const digits = q.replace(/\D/g, '');
       const useDigits = digits.length >= 2;
       result = await db.execute({
-        sql: `SELECT id, first_name, last_name, phone, email, last_seen FROM contacts
+        sql: `SELECT id, first_name, last_name, suffix, phone, email, last_seen, waiver_year, signed_at${extra} FROM contacts
               WHERE first_name LIKE ? OR last_name LIKE ? OR (first_name || ' ' || last_name) LIKE ? OR phone LIKE ?${useDigits ? ` OR REPLACE(phone, '-', '') LIKE ?` : ''}
               ORDER BY last_seen DESC LIMIT 10`,
         args: useDigits ? [like, like, like, like, `%${digits}%`] : [like, like, like, like],
       });
     } else {
       result = await db.execute(
-        `SELECT id, first_name, last_name, phone, email, last_seen FROM contacts ORDER BY last_name ASC, first_name ASC`
+        `SELECT id, first_name, last_name, suffix, phone, email, last_seen, waiver_year, signed_at${extra} FROM contacts ORDER BY last_name ASC, first_name ASC`
       );
     }
     return Response.json(result.rows.map(r => ({
-      id:        Number(r.id),
-      firstName: r.first_name,
-      lastName:  r.last_name,
-      suffix:    r.suffix || '',
-      phone:     r.phone || '',
-      email:     r.email || '',
-      lastSeen:  r.last_seen || null,
+      id:         Number(r.id),
+      firstName:  r.first_name,
+      lastName:   r.last_name,
+      suffix:     r.suffix || '',
+      phone:      r.phone || '',
+      email:      r.email || '',
+      lastSeen:   r.last_seen || null,
+      waiverYear: r.waiver_year ?? null,
+      signedAt:   r.signed_at  ?? null,
+      ...(withSigs ? { signature: r.signature ?? null, waiverSnapshot: r.waiver_snapshot ?? null } : {}),
     })));
   } catch (e) {
     return Response.json({ error: e.message }, { status: 500 });
@@ -49,7 +56,7 @@ export async function onRequestGet({ request, env }) {
 }
 
 export async function onRequestPost({ request, env }) {
-  if (!checkAuth(request, env)) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!checkOperatorAuth(request, env)) return Response.json({ error: 'Unauthorized' }, { status: 401 });
   try {
     const db        = getDb(env);
     const body      = await request.json();

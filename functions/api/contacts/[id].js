@@ -1,5 +1,5 @@
 import { createClient } from '@libsql/client/web';
-import { checkAuth } from '../_auth.js';
+import { checkAuth, checkOperatorAuth } from '../_auth.js';
 
 function getDb(env) {
   return createClient({ url: env.TURSO_DATABASE_URL, authToken: env.TURSO_AUTH_TOKEN });
@@ -57,6 +57,22 @@ export async function onRequestPut({ params, request, env }) {
       phone:     r.phone || '',
       email:     r.email || '',
     });
+  } catch (e) {
+    return Response.json({ error: e.message }, { status: 500 });
+  }
+}
+
+export async function onRequestPatch({ params, request, env }) {
+  if (!checkOperatorAuth(request, env)) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!/^\d+$/.test(params.id)) return Response.json({ error: 'Invalid id' }, { status: 400 });
+  try {
+    const db = getDb(env);
+    const { signature, signedAt, waiverYear, waiverSnapshot } = await request.json();
+    await db.execute({
+      sql:  `UPDATE contacts SET signature=?, signed_at=?, waiver_year=?, waiver_snapshot=? WHERE id=?`,
+      args: [signature ?? null, signedAt ?? null, waiverYear ?? null, waiverSnapshot ?? null, params.id],
+    });
+    return Response.json({ success: true });
   } catch (e) {
     return Response.json({ error: e.message }, { status: 500 });
   }

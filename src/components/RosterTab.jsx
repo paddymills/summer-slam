@@ -1,4 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import { fetchContactsWithSignatures } from '../utils/api';
+import { viewWaiverForEntry } from '../utils/printWaivers';
 import {
   useReactTable,
   getCoreRowModel,
@@ -398,6 +400,9 @@ export default function RosterTab({
         cell: ({ row: { original: r } }) => (
           <span onClick={e => e.stopPropagation()}>
             <button className="btn btn-outline btn-sm" onClick={() => onEdit(r)}>Edit</button>
+            {r.appSigned === 1 && (
+              <button className="btn btn-outline btn-sm" onClick={() => viewWaiverForEntry(r, settings, fetchContactsWithSignatures)} style={{ marginLeft: 4 }}>App</button>
+            )}
             <button className="btn btn-danger btn-sm" onClick={() => onDelete(r.id)} style={{ marginLeft: 4 }}>Del</button>
           </span>
         ),
@@ -527,11 +532,11 @@ export default function RosterTab({
           />
         </div>
         <div className="table-wrapper">
-          <table style={{ tableLayout: 'fixed', minWidth: 600 }}>
+          <table style={{ tableLayout: 'fixed', minWidth: 660 }}>
             <colgroup>
-              <col style={{ width: '20%' }} /><col style={{ width: '20%' }} />
-              <col style={{ width: '20%' }} /><col style={{ width: '20%' }} />
-              <col style={{ width: '8%' }} /><col style={{ width: '12%' }} />
+              <col style={{ width: '22%' }} /><col style={{ width: '22%' }} />
+              <col style={{ width: '22%' }} /><col style={{ width: '22%' }} />
+              <col style={{ width: '6%' }} /><col style={{ width: '6%' }} />
             </colgroup>
             <thead>
               <tr>

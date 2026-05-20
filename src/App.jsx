@@ -23,7 +23,8 @@ import { useSettings, useSaveSettings } from './hooks/useSettings';
 import { useContacts, useUpdateContact, useDeleteContact, useUpsertContacts } from './hooks/useContacts';
 
 const DEFAULT_SETTINGS = {
-  tournamentDate:  '',
+  tournamentDate:     '',
+  tournamentLocation: '',
   fees:            { entryFee: 249, lunkerFee: 10, optFee: 20, option1Pct: 70 },
   payoutSettings:  {
     totalPayout: 10000,
@@ -174,7 +175,11 @@ const saveSettingsMut   = useSaveSettings();
       const prev = editingEntry;
       setEditingEntry(null);
       showToast(duplicate ? `Warning: Boat #${entryData.boatNo} is already in use!` : 'Entry saved!', duplicate ? 'warning' : 'success');
-      updateEntryMut.mutate({ id: prev.id, data: entryData }, {
+      // Reset appSigned if the co-angler changed — either newly added or swapped to a different person
+      const coAnglerPersonChanged = prev.appSigned === 1
+        && (entryData.coAnglerFirst || entryData.coAnglerLast)
+        && (prev.coAnglerFirst !== entryData.coAnglerFirst || prev.coAnglerLast !== entryData.coAnglerLast);
+      updateEntryMut.mutate({ id: prev.id, data: { ...entryData, ...(coAnglerPersonChanged ? { appSigned: 0 } : {}) } }, {
         onSuccess: () => {
           upsertContactsMut.mutate([
             { firstName: entryData.boaterFirst,   lastName: entryData.boaterLast,   suffix: entryData.boaterSuffix ?? '',   phone: entryData.boaterPhone,   email: entryData.boaterEmail,
@@ -249,7 +254,12 @@ const saveSettingsMut   = useSaveSettings();
     const entry = rawEntries.find(e => e.id === entryId);
     if (!entry) return;
     showToast('Entry updated!', 'success');
-    updateEntryMut.mutate({ id: entryId, data: { ...entry, ...updates, preserveWeighTime: true } }, {
+    // Reset appSigned if co-angler changed (added, swapped to different person, or replaced)
+    const coAnglerPersonChanged = entry.appSigned === 1
+      && (updates.coAnglerFirst || updates.coAnglerLast)
+      && (entry.coAnglerFirst !== updates.coAnglerFirst || entry.coAnglerLast !== updates.coAnglerLast);
+    const shouldResetAppSigned = coAnglerPersonChanged;
+    updateEntryMut.mutate({ id: entryId, data: { ...entry, ...updates, preserveWeighTime: true, ...(shouldResetAppSigned ? { appSigned: 0 } : {}) } }, {
       onSuccess: (updated) => {
         upsertContactsMut.mutate([
           { firstName: updated.boaterFirst,   lastName: updated.boaterLast,   suffix: updated.boaterSuffix ?? '',   phone: updated.boaterPhone,   email: updated.boaterEmail,
@@ -288,16 +298,16 @@ const saveSettingsMut   = useSaveSettings();
 
   async function handleSignUpEntry(entryData) {
     try {
-      await createEntryMut.mutateAsync(entryData);
+      const created = await createEntryMut.mutateAsync(entryData);
       showToast(`${entryData.boaterFirst} ${entryData.boaterLast} signed up!`, 'success');
       upsertContactsMut.mutate([
         { firstName: entryData.boaterFirst,   lastName: entryData.boaterLast,   phone: entryData.boaterPhone,   email: entryData.boaterEmail,   contactId: entryData.boaterContactId   ?? null },
         { firstName: entryData.coAnglerFirst, lastName: entryData.coAnglerLast, phone: entryData.coAnglerPhone, email: entryData.coAnglerEmail, contactId: entryData.coAnglerContactId ?? null },
       ]);
-      return true;
+      return created;
     } catch {
       showToast('Failed to sign up entry', 'error');
-      return false;
+      return null;
     }
   }
 
@@ -600,7 +610,7 @@ const saveSettingsMut   = useSaveSettings();
         {everUnlocked && (
           <>
             <div style={{ display: activeTab === 'signup' ? 'contents' : 'none' }}>
-              <SignUpTab onAddEntry={handleSignUpEntry} settings={settingsWithTheme} />
+              <SignUpTab onAddEntry={handleSignUpEntry} settings={settingsWithTheme} entries={rawEntries} onEntriesRefresh={() => entriesQuery.refetch()} />
             </div>
             <div style={{ display: activeTab === 'checkin' ? 'contents' : 'none' }}>
               <CheckInTab entries={rankedEntries} onSave={handleCheckInSave} />
