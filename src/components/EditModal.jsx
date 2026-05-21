@@ -121,9 +121,15 @@ export default function EditModal({ entry, onSave, onCancel, settings, operatorM
       const next = { ...prev, [field]: val };
       if (field === 'buyIn') {
         const amount = parseFloat(evalMath(String(val)));
-        if (!isNaN(amount) && amount > 0) {
+        if (val === '' || (!isNaN(amount) && amount === 0)) {
+          next.paid = 0;
+        } else if (!isNaN(amount) && amount > 0) {
           next.paid = amount >= entryFee ? 1 : 0;
         }
+      }
+      if (field === 'paid' && (val === 1 || val === '1')) {
+        const buyInAmount = parseFloat(evalMath(String(prev.buyIn)));
+        if (isNaN(buyInAmount) || buyInAmount < entryFee) return prev;
       }
       return next;
     });

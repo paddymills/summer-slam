@@ -241,6 +241,13 @@ const saveSettingsMut   = useSaveSettings();
     const entry = rawEntries.find(e => e.id === entryId);
     if (!entry) return;
     const next = (entry[field] === 1 || entry[field] === '1') ? 0 : 1;
+    if (field === 'paid' && next === 1) {
+      const entryFee = parseFloat(settings?.fees?.entryFee) || 249;
+      if (parseFloat(entry.buyIn || 0) < entryFee) {
+        showToast(`Entry paid requires a buy-in of at least $${entryFee}`, 'error');
+        return;
+      }
+    }
     updateEntryMut.mutate({ id: entryId, data: { ...entry, [field]: next } }, {
       onError: (err) => showToast(err.isConflict ? 'This entry was modified by another device — your changes were not saved.' : 'Failed to update', 'error'),
     });
