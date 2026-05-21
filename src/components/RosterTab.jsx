@@ -507,6 +507,14 @@ export default function RosterTab({
     ? Object.values(COL_WIDTHS).reduce((a, b) => a + b, 0)
     : Object.values(COL_WIDTHS).reduce((a, b) => a + b, 0) - COL_WIDTHS.actions;
 
+  function fmtSignedUp(ts) {
+    if (!ts) return '—';
+    const iso = ts.includes('T') ? ts : ts.replace(' ', 'T');
+    const d = new Date(iso.endsWith('Z') || iso.includes('+') ? iso : iso + 'Z');
+    if (isNaN(d)) return '—';
+    return `${d.toLocaleDateString([], { month: '2-digit', day: '2-digit', year: '2-digit' })} ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+  }
+
   // --- Operator middle view ---
   if (isOperator && !isUnlocked) {
     function toggleOpSort(col) {
@@ -670,13 +678,6 @@ export default function RosterTab({
         return lockedSortDesc ? -cmp : cmp;
       });
 
-    function fmtSignedUp(ts) {
-      if (!ts) return '—';
-      const iso = ts.includes('T') ? ts : ts.replace(' ', 'T');
-      const d = new Date(iso.endsWith('Z') || iso.includes('+') ? iso : iso + 'Z');
-      if (isNaN(d)) return '—';
-      return `${d.toLocaleDateString([], { month: '2-digit', day: '2-digit', year: '2-digit' })} ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-    }
 
     return (
       <div className="tab-panel active" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -721,12 +722,12 @@ export default function RosterTab({
           />
         </div>
         <div className="table-wrapper">
-          <table style={{ tableLayout: 'fixed', minWidth: isOperator ? 675 : 640 }}>
+          <table style={{ tableLayout: 'fixed', minWidth: 675 }}>
             <colgroup>
-              <col style={{ width: isOperator ? '110px' : '120px' }} /><col style={{ width: isOperator ? '110px' : '120px' }} />
-              <col style={{ width: isOperator ? '100px' : '110px' }} /><col style={{ width: isOperator ? '100px' : '110px' }} />
+              <col style={{ width: '110px' }} /><col style={{ width: '110px' }} />
+              <col style={{ width: '100px' }} /><col style={{ width: '100px' }} />
               <col style={{ width: '60px' }} /><col style={{ width: '110px' }} />
-              {isOperator && <col style={{ width: '75px' }} />}
+              <col style={{ width: '75px' }} />
             </colgroup>
             <thead>
               <tr>
@@ -736,7 +737,7 @@ export default function RosterTab({
                 <LockedSortTh col="coAnglerLast"   label="Co-Angler Last" />
                 <LockedSortTh col="boatNo"         label="Boat #" style={{ textAlign: 'center' }} />
                 <LockedSortTh col="signedUpAt"     label="Signed Up" style={{ textAlign: 'center' }} />
-                {isOperator && <th style={{ textAlign: 'center' }}>App</th>}
+                <th style={{ textAlign: 'center' }}>Signed</th>
               </tr>
             </thead>
             <tbody>
@@ -751,16 +752,13 @@ export default function RosterTab({
                   <td className="td-name">{row.coAnglerLast}{row.coAnglerSuffix ? ` ${row.coAnglerSuffix}` : ''}</td>
                   <td style={{ textAlign: 'center', fontWeight: 700, color: row.boatNo ? 'var(--gold-light)' : 'var(--header-bg)' }}>{row.boatNo || '—'}</td>
                   <td style={{ textAlign: 'center', fontSize: 11, color: 'var(--header-bg)', whiteSpace: 'nowrap' }}>{fmtSignedUp(row.signedUpAt)}</td>
-                  {isOperator && (
-                    <td style={{ textAlign: 'center' }} onClick={e => e.stopPropagation()}>
-                      <button className="btn btn-outline btn-sm" onClick={() => viewWaiverForEntry(row, settings, fetchContactsWithSignatures)}>App</button>
-                      {row.appSignedAt && <div style={{ fontSize: 10, color: '#4CAF50', marginTop: 2, whiteSpace: 'nowrap' }}>✓ {fmtSignedUp(row.appSignedAt)}</div>}
-                    </td>
-                  )}
+                  <td style={{ textAlign: 'center', fontSize: 12, fontWeight: 700, color: '#4CAF50' }}>
+                    ✓ Signed
+                  </td>
                 </tr>
               ))}
               {lockedSorted.length === 0 && (
-                <tr><td colSpan={isOperator ? 7 : 6} style={{ textAlign: 'center', color: 'var(--header-bg)', padding: 40 }}>No registered entries yet.</td></tr>
+                <tr><td colSpan={7} style={{ textAlign: 'center', color: 'var(--header-bg)', padding: 40 }}>No registered entries yet.</td></tr>
               )}
             </tbody>
           </table>

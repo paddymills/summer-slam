@@ -215,6 +215,7 @@ export default function SignUpTab({ onAddEntry, onDeleteEntry, settings, entries
 
   // Entry fee fields (shared by paper copy and digital pre-fill)
   const [feeAmount, setFeeAmount] = useState('');
+  const feeAmountRef = useRef('');
   const [feeLunker, setFeeLunker] = useState(false);
   const [feeOption, setFeeOption] = useState(false);
   const [paperCopy, setPaperCopy] = useState(false);
@@ -368,7 +369,7 @@ export default function SignUpTab({ onAddEntry, onDeleteEntry, settings, entries
     const errs = validate();
     if (Object.keys(errs).length) { setErrors(errs); return; }
 
-    const buyInNum = parseFloat(evalMath(String(feeAmount))) || 0;
+    const buyInNum = parseFloat(evalMath(String(feeAmountRef.current ?? feeAmount))) || 0;
     const paid     = buyInNum >= entryFee ? 1 : 0;
 
     const entry = {
@@ -402,6 +403,7 @@ export default function SignUpTab({ onAddEntry, onDeleteEntry, settings, entries
       setRecent(prev => [{ ...entry, id: created.id }, ...prev].slice(0, 10));
       setForm({ ...EMPTY });
       setErrors({});
+      feeAmountRef.current = '';
       setFeeAmount('');
       setFeeLunker(false);
       setFeeOption(false);
@@ -666,10 +668,10 @@ export default function SignUpTab({ onAddEntry, onDeleteEntry, settings, entries
                 inputMode="decimal"
                 value={feeAmount}
                 placeholder={paperCopy ? 'Required' : '0.00 or 249+10+20'}
-                onChange={e => { setFeeAmount(e.target.value); if (errors.feeAmount) setErrors(p => ({ ...p, feeAmount: null })); }}
+                onChange={e => { feeAmountRef.current = e.target.value; setFeeAmount(e.target.value); if (errors.feeAmount) setErrors(p => ({ ...p, feeAmount: null })); }}
                 onBlur={e => {
                   const result = evalMath(e.target.value);
-                  if (!isNaN(result) && e.target.value.trim()) setFeeAmount(parseFloat(result.toFixed(2)));
+                  if (!isNaN(result) && e.target.value.trim()) { const v = parseFloat(result.toFixed(2)); feeAmountRef.current = v; setFeeAmount(v); }
                 }}
                 style={{
                   ...FIELD,
