@@ -156,7 +156,7 @@ export function contactsToSigs(entry, contacts) {
 
 const WAIVER_EXTRA_CSS = `
   @page { margin: 0.45in; size: letter portrait; }
-  .waiver { max-width: 680px; margin: 0 auto; padding: 10px 12px; box-sizing: border-box; }
+  .waiver { max-width: 680px; margin: 0 auto; padding: 10px 12px; box-sizing: border-box; page-break-after: auto; break-after: auto; }
 `;
 
 export function printSingleWaiver(entry, boaterSigUrl, coaSigUrl, settings) {
@@ -269,7 +269,7 @@ export function printBlankApplication(settings, formData = null) {
     autoPrint: false,
     extraCss: `
       @page { margin: 0.45in; size: letter portrait; }
-      .waiver { max-width: 680px; margin: 0 auto; padding: 10px 12px; box-sizing: border-box; }
+      .waiver { max-width: 680px; margin: 0 auto; padding: 10px 12px; box-sizing: border-box; page-break-after: auto; break-after: auto; }
     `,
   });
 }
@@ -283,6 +283,9 @@ export function printAllWaivers(signedEntries, contacts, settings) {
 
   openPrintWindow(`${year} Summer Slam — Signed Applications`, html, {
     autoPrint: false,
-    extraCss: WAIVER_EXTRA_CSS,
+    extraCss: `
+      @page { margin: 0.45in; size: letter portrait; }
+      .waiver { max-width: 680px; margin: 0 auto; padding: 10px 12px; box-sizing: border-box; }
+    `,
   });
 }
