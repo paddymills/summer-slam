@@ -252,11 +252,12 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
         ...entry,
         boaterPhone:   effectiveBoaterPhone,
         coAnglerPhone: effectiveCoAnglerPhone,
-        appSigned: 1,
-        buyIn:  existingBuyIn,
-        paid:   keepPaid,
-        lunker: entry.lunker  || 0,
-        option: entry.option  || 0,
+        appSigned:   1,
+        buyIn:       existingBuyIn,
+        paid:        keepPaid,
+        lunker:      entry.lunker  || 0,
+        option:      entry.option  || 0,
+        feeVerified: 1,
       });
 
       const boaterSigUrl = prefillSigs?.boater?.signature   ?? captureSig(boaterCanvasRef.current);
@@ -297,15 +298,17 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
     setSubmitting(true);
     setError('');
     try {
+      const boaterSigUrl = captureSig(boaterCanvasRef.current);
+      const coaSigUrl    = hasCoAngler ? captureSig(coAnglerCanvasRef.current) : null;
       await signEntryAsCustomer(entry.id, {
         buyIn:          amount,
         lunker:         lunkerChecked ? 1 : 0,
         option:         optionChecked ? 1 : 0,
         boaterPhone:    effectiveBoaterPhone,
         coAnglerPhone:  effectiveCoAnglerPhone,
+        boaterSig:      boaterSigUrl,
+        coAnglerSig:    coaSigUrl,
       });
-      const boaterSigUrl = captureSig(boaterCanvasRef.current);
-      const coaSigUrl    = hasCoAngler ? captureSig(coAnglerCanvasRef.current) : null;
       const result = { appSigned: 1, buyIn: amount, lunker: lunkerChecked ? 1 : 0, option: optionChecked ? 1 : 0, paid: 0, feeVerified: 0 };
       setSubmittedSigs({ boater: boaterSigUrl, coAngler: coaSigUrl, result, customerMode: true });
       setSubmitted(true);
@@ -341,7 +344,7 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
     setSubmitting(true);
     setError('');
     try {
-      // 1. Update entry fees + app_signed (include any phone corrections entered inline)
+      // 1. Update entry fees + app_signed; operator submission always marks fee as verified
       await updateEntry(entry.id, {
         ...entry,
         boaterPhone:   effectiveBoaterPhone,
@@ -350,7 +353,8 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
         lunker:    lunkerChecked ? 1 : 0,
         option:    optionChecked ? 1 : 0,
         paid,
-        appSigned: 1,
+        appSigned:   1,
+        feeVerified: 1,
       });
 
       // 2. Capture or use prefilled signatures

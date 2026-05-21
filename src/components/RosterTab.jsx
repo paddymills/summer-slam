@@ -256,7 +256,11 @@ export default function RosterTab({
         meta: { tdClassName: 'td-name' },
         cell: ({ row: { original: r } }) => (
           <>
-            {r.needsAttention && <span style={{ color: '#ffb450', marginRight: 4 }}>⚠️</span>}
+            {r.needsAttention && (
+              r.appSigned !== 1
+                ? <span title="Self-submitted — needs operator verification" style={{ fontSize: 9, background: 'rgba(255,180,80,0.2)', color: '#ffb450', borderRadius: 3, padding: '1px 5px', fontWeight: 700, marginRight: 5, verticalAlign: 'middle', whiteSpace: 'nowrap' }}>Self-sub</span>
+                : <span style={{ color: '#ffb450', marginRight: 4 }}>⚠️</span>
+            )}
             {r.boaterFirst}
             {duplicateEntryIds.has(r.id) && <span title="Duplicate angler" style={{ marginLeft: 4, color: '#ffb450', fontWeight: 700 }}>!</span>}
           </>

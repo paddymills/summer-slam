@@ -43,6 +43,8 @@ function toJS(row) {
     boaterOrderNo:    row.boater_order_no    ?? '',
     coAnglerOrderNo:  row.co_angler_order_no ?? '',
     feeVerified:      row.fee_verified       ?? null,
+    boaterSig:        row.boater_sig         ?? null,
+    coAnglerSig:      row.co_angler_sig      ?? null,
   };
 }
 
@@ -189,6 +191,8 @@ export async function onRequestPatch({ params, request, env }) {
   try {
     const db   = getDb(env);
     try { await db.execute("ALTER TABLE entries ADD COLUMN fee_verified INTEGER"); } catch (_) {}
+    try { await db.execute("ALTER TABLE entries ADD COLUMN boater_sig TEXT"); } catch (_) {}
+    try { await db.execute("ALTER TABLE entries ADD COLUMN co_angler_sig TEXT"); } catch (_) {}
     const body = await request.json();
     if (!body.customerSign) return Response.json({ error: 'Missing customerSign flag' }, { status: 400 });
 
@@ -201,6 +205,8 @@ export async function onRequestPatch({ params, request, env }) {
       sql: `UPDATE entries SET
               app_signed=1, fee_verified=0, buy_in=?, lunker=?, option_field=?, paid=0,
               app_signed_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP,
+              boater_sig     = COALESCE(?, boater_sig),
+              co_angler_sig  = COALESCE(?, co_angler_sig),
               boater_phone   = CASE WHEN (boater_phone   IS NULL OR boater_phone   = '') AND ? != '' THEN ? ELSE boater_phone   END,
               co_angler_phone= CASE WHEN (co_angler_phone IS NULL OR co_angler_phone= '') AND ? != '' THEN ? ELSE co_angler_phone END
             WHERE id=?`,
@@ -208,6 +214,8 @@ export async function onRequestPatch({ params, request, env }) {
         Number(body.buyIn) || 0,
         Number(body.lunker) || 0,
         Number(body.option) || 0,
+        body.boaterSig    ?? null,
+        body.coAnglerSig  ?? null,
         body.boaterPhone ?? '', body.boaterPhone ?? '',
         body.coAnglerPhone ?? '', body.coAnglerPhone ?? '',
         params.id,

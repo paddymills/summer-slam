@@ -58,6 +58,8 @@ function parseEntry(raw) {
     boaterOrderNo:   raw.boater_order_no   ?? raw.boaterOrderNo   ?? '',
     coAnglerOrderNo: raw.co_angler_order_no ?? raw.coAnglerOrderNo ?? '',
     feeVerified:     raw.fee_verified       ?? raw.feeVerified     ?? null,
+    boaterSig:       raw.boater_sig         ?? raw.boaterSig       ?? null,
+    coAnglerSig:     raw.co_angler_sig      ?? raw.coAnglerSig     ?? null,
   };
 }
 
@@ -225,11 +227,21 @@ export async function deleteContact(id) {
   if (!res.ok) throw new Error('Failed to delete contact');
 }
 
-export async function signEntryAsCustomer(id, { buyIn, lunker, option, boaterPhone, coAnglerPhone }) {
+export async function createPublicEntry(entry) {
+  const res = await fetchWithTimeout(`${BASE}/entries`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...entry, selfRegister: true }),
+  });
+  if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || 'Failed to submit entry');
+  return parseEntry(await res.json());
+}
+
+export async function signEntryAsCustomer(id, { buyIn, lunker, option, boaterPhone, coAnglerPhone, boaterSig, coAnglerSig }) {
   const res = await fetchWithTimeout(`${BASE}/entries/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ customerSign: true, buyIn, lunker, option, boaterPhone, coAnglerPhone }),
+    body: JSON.stringify({ customerSign: true, buyIn, lunker, option, boaterPhone, coAnglerPhone, boaterSig, coAnglerSig }),
   });
   if (res.status === 409) throw new Error('This application has already been signed.');
   if (!res.ok) throw new Error('Failed to save application. Please try again.');

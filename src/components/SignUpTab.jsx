@@ -4,7 +4,7 @@ import EmailInput from './EmailInput';
 import WaiverModal from './WaiverModal';
 import { formatPhone } from '../utils/phone';
 import { evalMath } from '../utils/evalMath';
-import { fetchContactsWithSignatures, saveContactWaiver, lookupContactId } from '../utils/api';
+import { fetchContactsWithSignatures, saveContactWaiver, lookupContactId, createPublicEntry } from '../utils/api';
 import { printAllWaivers, viewWaiverForEntry, contactsToSigs, printBlankApplication, shareBlankApplication, LEGAL_CLAUSES } from '../utils/printWaivers';
 
 const FIELD = {
@@ -50,8 +50,45 @@ function PublicSignUpView({ settings, entries = [], onEntriesRefresh }) {
   const [form, setForm]               = useState({ ...EMPTY });
   const [searchName, setSearchName]   = useState('');
   const [customerWaiver, setCustomerWaiver] = useState(null);
+  const [submitting, setSubmitting]   = useState(false);
+  const [submitError, setSubmitError] = useState('');
 
   function set(field, val) { setForm(prev => ({ ...prev, [field]: val })); }
+
+  async function handleSubmitAndSign() {
+    if (!form.boaterFirst.trim() || !form.boaterLast.trim()) {
+      setSubmitError('First and last name are required.');
+      return;
+    }
+    if (!form.boaterPhone.trim()) {
+      setSubmitError('Boater phone number is required.');
+      return;
+    }
+    setSubmitError('');
+    setSubmitting(true);
+    try {
+      const created = await createPublicEntry({
+        boaterFirst:    form.boaterFirst.trim(),
+        boaterLast:     form.boaterLast.trim(),
+        boaterSuffix:   form.boaterSuffix,
+        boaterPhone:    formatPhone(form.boaterPhone.trim()),
+        boaterEmail:    form.boaterEmail.trim(),
+        coAnglerFirst:  form.coAnglerFirst.trim(),
+        coAnglerLast:   form.coAnglerLast.trim(),
+        coAnglerSuffix: form.coAnglerSuffix,
+        coAnglerPhone:  formatPhone(form.coAnglerPhone.trim()),
+        coAnglerEmail:  form.coAnglerEmail.trim(),
+        boaterOrderNo:  form.boaterOrderNo.trim(),
+        coAnglerOrderNo: form.coAnglerOrderNo.trim(),
+      });
+      setForm({ ...EMPTY });
+      setCustomerWaiver(created);
+    } catch (e) {
+      setSubmitError(e.message || 'Failed to submit. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
 
   const norm = s => (s || '').toLowerCase().trim();
   const matchingEntries = searchName.trim().length >= 2
@@ -173,12 +210,29 @@ function PublicSignUpView({ settings, entries = [], onEntriesRefresh }) {
               </div>
             </div>
 
+            {/* Submit & Sign Online */}
+            {submitError && (
+              <p style={{ color: '#ff6b6b', fontSize: 13, margin: 0, textAlign: 'center' }}>{submitError}</p>
+            )}
+            <button
+              type="button"
+              className="btn btn-gold"
+              style={{ fontSize: 16, padding: '14px 0', fontWeight: 800 }}
+              disabled={submitting}
+              onClick={handleSubmitAndSign}
+            >
+              {submitting ? 'Submitting…' : '✍ Submit & Sign Online'}
+            </button>
+            <p style={{ fontSize: 12, color: 'var(--header-bg)', textAlign: 'center', marginTop: -6 }}>
+              Signs your application digitally. Your buy-in amount will be self-reported and verified by staff.
+            </p>
+
             {/* Print / Share buttons */}
             <div style={{ display: 'flex', gap: 10 }}>
               <button
                 type="button"
-                className="btn btn-gold"
-                style={{ flex: 1, fontSize: 15, padding: '13px 0' }}
+                className="btn btn-outline"
+                style={{ flex: 1, fontSize: 14, padding: '11px 0' }}
                 onClick={() => printBlankApplication(settings, form)}
               >
                 🖨 Print Application
@@ -186,21 +240,21 @@ function PublicSignUpView({ settings, entries = [], onEntriesRefresh }) {
               <button
                 type="button"
                 className="btn btn-outline"
-                style={{ flex: 1, fontSize: 15, padding: '13px 0' }}
+                style={{ flex: 1, fontSize: 14, padding: '11px 0' }}
                 onClick={async () => { try { await shareBlankApplication(settings, form); } catch (err) { if (err?.name !== 'AbortError') alert('Could not share PDF: ' + err?.message); } }}
               >
                 📤 Share / Email PDF
               </button>
             </div>
             <div style={{ fontSize: 12, color: 'var(--header-bg)', textAlign: 'center', marginTop: -6 }}>
-              Email to <strong style={{ color: 'var(--white)' }}>info@sfttackle.com</strong>
+              Paper form — email to <strong style={{ color: 'var(--white)' }}>info@sfttackle.com</strong>
             </div>
 
             <button
               type="button"
               className="btn btn-outline"
               style={{ fontSize: 14 }}
-              onClick={() => setForm({ ...EMPTY })}
+              onClick={() => { setForm({ ...EMPTY }); setSubmitError(''); }}
             >
               Clear
             </button>

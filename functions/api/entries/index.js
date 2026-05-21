@@ -43,6 +43,8 @@ function toJS(row, hidePI = false) {
     boaterOrderNo:    row.boater_order_no    ?? '',
     coAnglerOrderNo:  row.co_angler_order_no ?? '',
     feeVerified:      row.fee_verified       ?? null,
+    boaterSig:        hidePI ? null : (row.boater_sig    ?? null),
+    coAnglerSig:      hidePI ? null : (row.co_angler_sig ?? null),
   };
 }
 
@@ -69,11 +71,51 @@ export async function onRequestDelete({ request, env }) {
 }
 
 export async function onRequestPost({ request, env }) {
-  if (!checkOperatorAuth(request, env)) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  const body = await request.json().catch(() => null);
+  if (!body) return Response.json({ error: 'Invalid JSON' }, { status: 400 });
+
+  const isSelfRegister = body.selfRegister === true;
+  if (!isSelfRegister && !checkOperatorAuth(request, env)) {
+    return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const db   = getDb(env);
     try { await db.execute("ALTER TABLE entries ADD COLUMN fee_verified INTEGER"); } catch (_) {}
-    const body = await request.json();
+    try { await db.execute("ALTER TABLE entries ADD COLUMN boater_sig TEXT"); } catch (_) {}
+    try { await db.execute("ALTER TABLE entries ADD COLUMN co_angler_sig TEXT"); } catch (_) {}
+
+    // Self-registration: only allow name/contact fields; force attention flag + no fees
+    if (isSelfRegister) {
+      const t = v => (v ?? '').trim();
+      if (!t(body.boaterFirst) || !t(body.boaterLast)) {
+        return Response.json({ error: 'First and last name are required' }, { status: 400 });
+      }
+      const result = await db.execute({
+        sql: `INSERT INTO entries
+                (boater_first, boater_last, boater_suffix, boater_phone, boater_email,
+                 co_angler_first, co_angler_last, co_angler_suffix, co_angler_phone, co_angler_email,
+                 boater_order_no, co_angler_order_no,
+                 boat_no, num_fish, lunker_weight, total_weight,
+                 lunker, option_field, paid, app_signed, buy_in,
+                 raw_weight, dead_fish, short_fish, needs_attention,
+                 signed_up_at, updated_at)
+              VALUES (?,?,?,?,?, ?,?,?,?,?, ?,?, '',0,0,0, 0,0,0,0,0, null,0,0,1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+        args: [
+          t(body.boaterFirst), t(body.boaterLast), t(body.boaterSuffix ?? ''), t(body.boaterPhone ?? ''), t(body.boaterEmail ?? ''),
+          t(body.coAnglerFirst ?? ''), t(body.coAnglerLast ?? ''), t(body.coAnglerSuffix ?? ''), t(body.coAnglerPhone ?? ''), t(body.coAnglerEmail ?? ''),
+          t(body.boaterOrderNo ?? ''), t(body.coAnglerOrderNo ?? ''),
+        ],
+      });
+      const newId = Number(result.lastInsertRowid);
+      try {
+        await db.execute('CREATE TABLE IF NOT EXISTS event_log (id INTEGER PRIMARY KEY AUTOINCREMENT, event_type TEXT NOT NULL, entry_id INTEGER, boat_no TEXT, boater_name TEXT, value TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)');
+        const boaterName = [t(body.boaterFirst), t(body.boaterLast), t(body.boaterSuffix ?? '')].filter(Boolean).join(' ');
+        await db.execute({ sql: 'INSERT INTO event_log (event_type, entry_id, boat_no, boater_name, value) VALUES (?,?,?,?,?)', args: ['signup', newId, '', boaterName, 'self-registered'] });
+      } catch (_) {}
+      const newRow = await db.execute({ sql: 'SELECT * FROM entries WHERE id = ?', args: [newId] });
+      return Response.json(toJS(newRow.rows[0]), { status: 201 });
+    }
     const t    = v => (v ?? '').trim();
 
     const result = await db.execute({
