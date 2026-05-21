@@ -175,12 +175,7 @@ export default function SettingsTab({ settings, entries, isUnlocked, onUpdateSet
     const contacts = await fetchContacts().catch(() => []);
     const withEmail = contacts.filter(c => c.email && c.email.trim());
     if (!withEmail.length) { alert('No contacts with email addresses found.'); return; }
-    const csvEsc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
-    const rows = [
-      ['First Name', 'Last Name', 'Email', 'Phone'],
-      ...withEmail.map(c => [csvEsc(c.firstName), csvEsc(c.lastName), csvEsc(c.email), csvEsc(c.phone)]),
-    ];
-    const csv = rows.map(r => r.join(',')).join('\r\n');
+    const csv = withEmail.map(c => c.email.trim()).join('\r\n');
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
     a.download = `contact-emails-${new Date().toISOString().slice(0, 10)}.csv`;
