@@ -224,11 +224,11 @@ export async function deleteContact(id) {
   if (!res.ok) throw new Error('Failed to delete contact');
 }
 
-export async function saveContactWaiver(id, { signature, signedAt, waiverYear, waiverSnapshot }) {
+export async function saveContactWaiver(id, { signature, signedAt, waiverYear, waiverSnapshot, waiverHtml }) {
   const res = await fetchWithTimeout(`${BASE}/contacts/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json', ...authHeaders() },
-    body: JSON.stringify({ signature, signedAt, waiverYear, waiverSnapshot }),
+    body: JSON.stringify({ signature, signedAt, waiverYear, waiverSnapshot, waiverHtml }),
   });
   if (!res.ok) throw new Error('Failed to save waiver');
 }

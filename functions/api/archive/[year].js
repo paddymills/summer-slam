@@ -42,7 +42,8 @@ function toJS(row, hidePI = false) {
     coAnglerOrderNo:   row.co_angler_order_no ?? '',
     boaterSignature:   hidePI ? null : (row.boater_signature    ?? null),
     coAnglerSignature: hidePI ? null : (row.co_angler_signature ?? null),
-    waiverSnapshot:    row.waiver_snapshot    ?? null,
+    waiverSnapshot:    row.waiver_snapshot ?? null,
+    waiverHtml:        row.waiver_html     ?? null,
   };
 }
 

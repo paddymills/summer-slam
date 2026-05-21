@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { updateEntry, saveContactWaiver, lookupContactId } from '../utils/api';
-import { printSingleWaiver } from '../utils/printWaivers';
+import { printSingleWaiver, waiverHTMLTemplate } from '../utils/printWaivers';
 import { formatPhone } from '../utils/phone';
 
 const OVERLAY = {
@@ -239,6 +239,11 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
     const now      = new Date().toISOString();
     const snapshot = JSON.stringify({ year, tournamentDate: tDate, tournamentLocation: tLocation });
     const keepPaid = existingBuyIn >= entryFee ? 1 : 0;
+    const waiverHtml = waiverHTMLTemplate({
+      ...entry,
+      boaterPhone: effectiveBoaterPhone, coAnglerPhone: effectiveCoAnglerPhone,
+      buyIn: existingBuyIn, lunker: entry.lunker || 0, option: entry.option || 0, paid: keepPaid, appSigned: 1,
+    }, settings);
 
     setSubmitting(true);
     setError('');
@@ -262,12 +267,12 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
       if (!prefillSigs?.boater?.signature) {
         let boaterCid = boaterContactId;
         if (!boaterCid) boaterCid = await lookupContactId(entry.boaterFirst, entry.boaterLast, effectiveBoaterPhone);
-        if (boaterCid) await saveContactWaiver(boaterCid, { signature: boaterSigUrl, signedAt: now, waiverYear: year, waiverSnapshot: snapshot });
+        if (boaterCid) await saveContactWaiver(boaterCid, { signature: boaterSigUrl, signedAt: now, waiverYear: year, waiverSnapshot: snapshot, waiverHtml });
       }
       if (hasCoAngler && !prefillSigs?.coAngler?.signature) {
         let coaCid = coAnglerContactId;
         if (!coaCid) coaCid = await lookupContactId(entry.coAnglerFirst, entry.coAnglerLast, effectiveCoAnglerPhone);
-        if (coaCid) await saveContactWaiver(coaCid, { signature: coaSigUrl, signedAt: now, waiverYear: year, waiverSnapshot: snapshot });
+        if (coaCid) await saveContactWaiver(coaCid, { signature: coaSigUrl, signedAt: now, waiverYear: year, waiverSnapshot: snapshot, waiverHtml });
       }
 
       const result = { appSigned: 1, buyIn: existingBuyIn, lunker: entry.lunker || 0, option: entry.option || 0, paid: keepPaid };
@@ -296,6 +301,11 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
     const paid = amount >= entryFee ? 1 : 0;
     const now    = new Date().toISOString();
     const snapshot = JSON.stringify({ year, tournamentDate: tDate, tournamentLocation: tLocation });
+    const waiverHtml = waiverHTMLTemplate({
+      ...entry,
+      boaterPhone: effectiveBoaterPhone, coAnglerPhone: effectiveCoAnglerPhone,
+      buyIn: amount, lunker: lunkerChecked ? 1 : 0, option: optionChecked ? 1 : 0, paid, appSigned: 1,
+    }, settings);
 
     setSubmitting(true);
     setError('');
@@ -323,7 +333,7 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
         let boaterCid = boaterContactId;
         if (!boaterCid) boaterCid = await lookupContactId(entry.boaterFirst, entry.boaterLast, effectiveBoaterPhone);
         if (boaterCid) {
-          await saveContactWaiver(boaterCid, { signature: boaterSigUrl, signedAt: now, waiverYear: year, waiverSnapshot: snapshot });
+          await saveContactWaiver(boaterCid, { signature: boaterSigUrl, signedAt: now, waiverYear: year, waiverSnapshot: snapshot, waiverHtml });
         }
       }
 
@@ -332,7 +342,7 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
         let coaCid = coAnglerContactId;
         if (!coaCid) coaCid = await lookupContactId(entry.coAnglerFirst, entry.coAnglerLast, effectiveCoAnglerPhone);
         if (coaCid) {
-          await saveContactWaiver(coaCid, { signature: coaSigUrl, signedAt: now, waiverYear: year, waiverSnapshot: snapshot });
+          await saveContactWaiver(coaCid, { signature: coaSigUrl, signedAt: now, waiverYear: year, waiverSnapshot: snapshot, waiverHtml });
         }
       }
 

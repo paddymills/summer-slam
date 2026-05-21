@@ -67,10 +67,11 @@ export async function onRequestPatch({ params, request, env }) {
   if (!/^\d+$/.test(params.id)) return Response.json({ error: 'Invalid id' }, { status: 400 });
   try {
     const db = getDb(env);
-    const { signature, signedAt, waiverYear, waiverSnapshot } = await request.json();
+    try { await db.execute("ALTER TABLE contacts ADD COLUMN waiver_html TEXT"); } catch (_) {}
+    const { signature, signedAt, waiverYear, waiverSnapshot, waiverHtml } = await request.json();
     await db.execute({
-      sql:  `UPDATE contacts SET signature=?, signed_at=?, waiver_year=?, waiver_snapshot=? WHERE id=?`,
-      args: [signature ?? null, signedAt ?? null, waiverYear ?? null, waiverSnapshot ?? null, params.id],
+      sql:  `UPDATE contacts SET signature=?, signed_at=?, waiver_year=?, waiver_snapshot=?, waiver_html=? WHERE id=?`,
+      args: [signature ?? null, signedAt ?? null, waiverYear ?? null, waiverSnapshot ?? null, waiverHtml ?? null, params.id],
     });
     return Response.json({ success: true });
   } catch (e) {

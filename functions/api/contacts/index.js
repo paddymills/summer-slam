@@ -21,7 +21,7 @@ export async function onRequestGet({ request, env }) {
     const q        = url.searchParams.get('q') || '';
     const withSigs = url.searchParams.get('signatures') === '1';
     const db       = getDb(env);
-    const extra    = withSigs ? ', signature, waiver_snapshot' : '';
+    const extra    = withSigs ? ', signature, waiver_snapshot, waiver_html' : '';
     let result;
     if (q.length >= 2) {
       const like = `%${q}%`;
@@ -48,7 +48,7 @@ export async function onRequestGet({ request, env }) {
       lastSeen:   r.last_seen || null,
       waiverYear: r.waiver_year ?? null,
       signedAt:   r.signed_at  ?? null,
-      ...(withSigs ? { signature: r.signature ?? null, waiverSnapshot: r.waiver_snapshot ?? null } : {}),
+      ...(withSigs ? { signature: r.signature ?? null, waiverSnapshot: r.waiver_snapshot ?? null, waiverHtml: r.waiver_html ?? null } : {}),
     })));
   } catch (e) {
     return Response.json({ error: e.message }, { status: 500 });

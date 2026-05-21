@@ -9,6 +9,23 @@ export const LEGAL_CLAUSES = [
   '<strong>5.</strong> I have sufficient health, accident and liability insurance to cover any bodily injury or property damage incurred by myself or others as a result of my participation in this event. If I have no such insurance, I represent that I am capable of paying for any and all such expenses or liability.',
 ];
 
+// Template placeholder tokens used in frozen HTML snapshots
+function sigBlockTemplate(label, number, year) {
+  const tokenSig  = label === 'Boater' ? '{{BOATER_SIG}}'  : '{{COA_SIG}}';
+  const tokenDate = label === 'Boater' ? '{{BOATER_DATE}}' : '{{COA_DATE}}';
+  return `
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:700;margin-bottom:3px;color:#333;">
+        #${number} ${label} Signature &nbsp;
+        <span style="font-weight:400;color:#666;font-size:9px;">(Good through 12/31/${year})</span>
+      </div>
+      <div style="border:1px solid #aaa;border-radius:3px;background:#fafafa;height:80px;overflow:hidden;">
+        ${tokenSig}
+      </div>
+      <div style="font-size:9px;color:#666;margin-top:3px;">${tokenDate}</div>
+    </div>`;
+}
+
 // sig: { signature: dataUrl|'paper'|null, signedAt: isoString|null }
 function sigBlock(sig, label, number, year, isPaper = false) {
   const hasPaper = isPaper || sig?.signature === 'paper';
@@ -33,7 +50,7 @@ function sigBlock(sig, label, number, year, isPaper = false) {
     </div>`;
 }
 
-function waiverHTML(entry, boaterSig, coaSig, settings) {
+function waiverHTML(entry, boaterSig, coaSig, settings, templateMode = false) {
   const year      = new Date().getFullYear();
   const entryFee  = parseFloat(settings?.fees?.entryFee) || 250;
   const lunkerFee = parseFloat(settings?.fees?.lunkerFee) || 10;
@@ -98,8 +115,8 @@ function waiverHTML(entry, boaterSig, coaSig, settings) {
       </div>
 
       <div style="display:flex;gap:16px;margin-top:12px;">
-        ${sigBlock(boaterSig, 'Boater', 1, year, isPaper)}
-        ${hasCoAngler ? sigBlock(coaSig, 'Co-Angler', 2, year, isPaper) : ''}
+        ${templateMode ? sigBlockTemplate('Boater', 1, year) : sigBlock(boaterSig, 'Boater', 1, year, isPaper)}
+        ${hasCoAngler ? (templateMode ? sigBlockTemplate('Co-Angler', 2, year) : sigBlock(coaSig, 'Co-Angler', 2, year, isPaper)) : ''}
       </div>
     </div>`;
 }
@@ -161,6 +178,31 @@ export function contactsToSigs(entry, contacts) {
   };
 }
 
+// Returns the waiver HTML with {{BOATER_SIG}}, {{BOATER_DATE}}, {{COA_SIG}}, {{COA_DATE}} placeholders
+export function waiverHTMLTemplate(entry, settings) {
+  return waiverHTML(entry, null, null, settings, true);
+}
+
+// Inject archived sigs into a frozen template previously created by waiverHTMLTemplate
+export function renderArchivedWaiver(templateHtml, boaterSig, coaSig) {
+  const fmtDate = sig => {
+    if (!sig?.signedAt) return '';
+    const d = new Date(sig.signedAt).toLocaleDateString('en-US', {
+      month: 'numeric', day: 'numeric', year: '2-digit', hour: 'numeric', minute: '2-digit',
+    });
+    return `Signed: ${d}`;
+  };
+  const imgHtml = sig =>
+    sig?.signature
+      ? `<img src="${sig.signature}" style="display:block;width:100%;height:auto;max-height:80px;object-fit:contain;object-position:left;" />`
+      : `<div style="display:flex;align-items:center;justify-content:center;height:80px;color:#999;font-size:11px;">Signature not on file</div>`;
+  return templateHtml
+    .replace('{{BOATER_SIG}}',  imgHtml(boaterSig))
+    .replace('{{COA_SIG}}',     imgHtml(coaSig))
+    .replace('{{BOATER_DATE}}', fmtDate(boaterSig))
+    .replace('{{COA_DATE}}',    fmtDate(coaSig));
+}
+
 const WAIVER_EXTRA_CSS = `
   @page { margin: 0.45in; size: letter portrait; }
   .waiver { max-width: 680px; margin: 0 auto; padding: 10px 12px; box-sizing: border-box; page-break-after: auto; break-after: auto; }
@@ -180,9 +222,13 @@ export function viewSingleWaiver(entry, boaterSigUrl, coaSigUrl, settings) {
   openPrintWindow(makeTitle(entry), waiverHTML(entry, boaterSig, coaSig, settings), { autoPrint: false, extraCss: WAIVER_EXTRA_CSS });
 }
 
-// For archived waivers where we already have { signature, signedAt } objects
+// For archived waivers where we already have { signature, signedAt } objects.
+// Uses frozen HTML template when available; falls back to reconstructing from entry data.
 export function viewArchivedWaiver(entry, boaterSig, coaSig, settings) {
-  openPrintWindow(makeTitle(entry), waiverHTML(entry, boaterSig, coaSig, settings), { autoPrint: false, extraCss: WAIVER_EXTRA_CSS });
+  const html = entry.waiverHtml
+    ? renderArchivedWaiver(entry.waiverHtml, boaterSig, coaSig)
+    : waiverHTML(entry, boaterSig, coaSig, settings);
+  openPrintWindow(makeTitle(entry), html, { autoPrint: false, extraCss: WAIVER_EXTRA_CSS });
 }
 
 export async function viewWaiverForEntry(entry, settings, fetchContactsFn) {
@@ -366,14 +412,22 @@ export async function shareBlankApplication(settings, formData = null) {
   doc.rect(x, y - 2.8, 3, 3); x += 4;
   doc.text(`Option ($${optFee})`, x, y); x += doc.getTextWidth(`Option ($${optFee})`) + 6;
   doc.text('Buy-In:', x, y); x += doc.getTextWidth('Buy-In:') + 1;
-  underline(x, x + 28, y); x += 30;
-  doc.text('Boater Order #:', x, y); x += doc.getTextWidth('Boater Order #:') + 1;
-  underline(x, x + 28, y);
-  if (f.boaterOrderNo) { sf('bold', 8.5); doc.text(f.boaterOrderNo, x + 1, y); sf('normal', 8.5); }
-  x += 30;
-  doc.text('Co-Angler Order #:', x, y); x += doc.getTextWidth('Co-Angler Order #:') + 1;
+  underline(x, x + 35, y);
+  y += 6;
+
+  // Order # on its own line so Co-Angler Order # doesn't get cut off
+  x = M;
+  sf('normal', 8.5);
+  const boaterLabelW = doc.getTextWidth('Boater Order #:');
+  const coaLabelW    = doc.getTextWidth('Co-Angler Order #:');
+  const orderBlankW  = (CW - boaterLabelW - coaLabelW - 14) / 2;
+  doc.text('Boater Order #:', x, y); x += boaterLabelW + 2;
+  underline(x, x + orderBlankW, y);
+  if (f.boaterOrderNo) { sf('bold', 8.5); doc.text(f.boaterOrderNo, x + 1, y, { maxWidth: orderBlankW - 2 }); sf('normal', 8.5); }
+  x += orderBlankW + 10;
+  doc.text('Co-Angler Order #:', x, y); x += coaLabelW + 2;
   underline(x, PW - M, y);
-  if (f.coAnglerOrderNo) { sf('bold', 8.5); doc.text(f.coAnglerOrderNo, x + 1, y); sf('normal', 8.5); }
+  if (f.coAnglerOrderNo) { sf('bold', 8.5); doc.text(f.coAnglerOrderNo, x + 1, y, { maxWidth: PW - M - x - 2 }); sf('normal', 8.5); }
   y += 7;
 
   // ── Anglers ────────────────────────────────────────────
@@ -428,11 +482,11 @@ export async function shareBlankApplication(settings, formData = null) {
     sf('bold', 8); doc.setTextColor(20, 20, 20);
     doc.text(`#${num} ${label} Signature`, sx, y);
     sf('normal', 7); doc.setTextColor(100, 100, 100);
-    doc.text(`(Good through 12/31/${year})`, sx + doc.getTextWidth(`#${num} ${label} Signature `) + 1, y);
+    doc.text(`(Good through 12/31/${year})`, sx, y + 3.5);
     doc.setFillColor(250, 250, 250); doc.setDrawColor(150, 150, 150); doc.setLineWidth(0.4);
-    doc.rect(sx, y + 2, sigW, sigH, 'FD');
+    doc.rect(sx, y + 7, sigW, sigH, 'FD');
     sf('normal', 7.5); doc.setTextColor(60, 60, 60);
-    const dy = y + sigH + 6;
+    const dy = y + 7 + sigH + 5;
     doc.text('Date:', sx, dy);
     underline(sx + doc.getTextWidth('Date:') + 1, sx + sigW, dy);
   });
@@ -451,20 +505,28 @@ export async function shareBlankApplication(settings, formData = null) {
   const pdfBlob  = doc.output('blob');
   const pdfFile  = new File([pdfBlob], fileName, { type: 'application/pdf' });
 
-  if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
-    await navigator.share({
-      title: subjectLine,
-      text: `Please email the attached entry form to ${SUBMIT_EMAIL}`,
-      files: [pdfFile],
-    });
-  } else {
-    // Download the PDF, then open a mailto so the user can email it
+  const fallbackShare = () => {
     const url = URL.createObjectURL(pdfBlob);
     const a   = document.createElement('a');
     a.href = url; a.download = fileName;
     document.body.appendChild(a); a.click();
     document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 1000);
-    window.location.href = `mailto:${SUBMIT_EMAIL}?subject=${encodeURIComponent(subjectLine)}&body=${encodeURIComponent(`Please find the attached entry form.\n\n(Attach the downloaded PDF: ${fileName})`)}`;
+    const body = `Please find the attached entry form.\n\n(Attach the downloaded PDF: ${fileName})`;
+    window.open(`mailto:${SUBMIT_EMAIL}?subject=${encodeURIComponent(subjectLine)}&body=${encodeURIComponent(body)}`);
+  };
+
+  if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+    try {
+      await navigator.share({
+        title: subjectLine,
+        text: `Please email the attached entry form to ${SUBMIT_EMAIL}`,
+        files: [pdfFile],
+      });
+    } catch (e) {
+      if (e.name !== 'AbortError') fallbackShare();
+    }
+  } else {
+    fallbackShare();
   }
 }

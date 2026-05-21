@@ -495,6 +495,7 @@ const saveSettingsMut   = useSaveSettings();
           boaterSignature:   bc?.signature       ?? null,
           coAnglerSignature: cac?.signature      ?? null,
           waiverSnapshot:    bc?.waiverSnapshot  ?? cac?.waiverSnapshot ?? null,
+          waiverHtml:        bc?.waiverHtml      ?? cac?.waiverHtml     ?? null,
         };
       });
       await archiveEntries(label, payload);

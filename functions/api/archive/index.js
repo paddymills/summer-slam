@@ -32,6 +32,7 @@ export async function onRequestPost({ request, env }) {
       "ALTER TABLE archives ADD COLUMN boater_signature TEXT",
       "ALTER TABLE archives ADD COLUMN co_angler_signature TEXT",
       "ALTER TABLE archives ADD COLUMN waiver_snapshot TEXT",
+      "ALTER TABLE archives ADD COLUMN waiver_html TEXT",
     ]) { try { await db.execute(sql); } catch (_) {} }
     if (!year || !Array.isArray(entries)) {
       return Response.json({ error: 'year and entries are required' }, { status: 400 });
@@ -52,8 +53,8 @@ export async function onRequestPost({ request, env }) {
                  lunker, option_field, paid, app_signed, buy_in, needs_attention,
                  weighed_at, signed_up_at, checked_in_at, off_water_at,
                  app_signed_at, boater_order_no, co_angler_order_no,
-                 boater_signature, co_angler_signature, waiver_snapshot)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                 boater_signature, co_angler_signature, waiver_snapshot, waiver_html)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         args: [
           String(year),
           e.place != null ? Number(e.place) : null,
@@ -90,6 +91,7 @@ export async function onRequestPost({ request, env }) {
           e.boaterSignature    ?? null,
           e.coAnglerSignature  ?? null,
           e.waiverSnapshot     ?? null,
+          e.waiverHtml         ?? null,
         ],
       })),
     ];
