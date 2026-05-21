@@ -15,17 +15,17 @@ function sigBlock(sig, label, number, year, isPaper = false) {
     ? new Date(sig.signedAt).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: '2-digit', hour: 'numeric', minute: '2-digit' })
     : '';
   return `
-    <div style="margin-bottom:10px;">
-      <div style="font-size:11px;font-weight:700;margin-bottom:4px;color:#333;">
+    <div style="flex:1;min-width:0;display:flex;flex-direction:column;">
+      <div style="font-size:10px;font-weight:700;margin-bottom:3px;color:#333;">
         #${number} ${label} Signature &nbsp;
-        <span style="font-weight:400;color:#666;font-size:10px;">(Good through 12/31/${year})</span>
+        <span style="font-weight:400;color:#666;font-size:9px;">(Good through 12/31/${year})</span>
       </div>
-      <div style="border:1px solid #aaa;border-radius:3px;background:#fafafa;min-height:60px;">
+      <div style="flex:1;border:1px solid #aaa;border-radius:3px;background:#fafafa;min-height:60px;">
         ${hasDigital
-          ? `<img src="${sig.signature}" style="display:block;width:100%;height:auto;max-height:70px;object-fit:contain;object-position:left;" />`
+          ? `<img src="${sig.signature}" style="display:block;width:100%;height:auto;max-height:80px;object-fit:contain;object-position:left;" />`
           : hasPaper
-            ? `<div style="display:flex;align-items:center;justify-content:center;height:60px;color:#555;font-size:12px;font-weight:600;font-style:italic;">Paper Application</div>`
-            : `<div style="display:flex;align-items:center;justify-content:center;height:60px;color:#999;font-size:11px;">Signature not on file</div>`}
+            ? `<div style="display:flex;align-items:center;justify-content:center;height:100%;min-height:60px;color:#555;font-size:12px;font-weight:600;font-style:italic;">Paper Application</div>`
+            : `<div style="display:flex;align-items:center;justify-content:center;height:100%;min-height:60px;color:#999;font-size:11px;">Signature not on file</div>`}
       </div>
       ${sigDate ? `<div style="font-size:9px;color:#666;margin-top:3px;">Signed: ${sigDate}</div>` : ''}
     </div>`;
@@ -52,7 +52,7 @@ function waiverHTML(entry, boaterSig, coaSig, settings) {
   const extras      = [entry.lunker && `Lunker ($${lunkerFee})`, entry.option && `Option ($${optFee})`].filter(Boolean).join(' · ');
 
   const clauseP = LEGAL_CLAUSES.map(c =>
-    `<p style="font-size:10.5px;line-height:1.4;margin:0 0 6px;text-align:justify;color:#222;">${c}</p>`
+    `<p style="font-size:9.5px;line-height:1.3;margin:0 0 4px;text-align:justify;color:#222;">${c}</p>`
   ).join('');
 
   return `
@@ -90,8 +90,10 @@ function waiverHTML(entry, boaterSig, coaSig, settings) {
         THIS SIGNED WAIVER IS IN EFFECT FOR ANY SUSQUEHANNA FISHING TACKLE, INC. TOURNAMENT IN ${year}
       </div>
 
-      ${sigBlock(boaterSig, 'Boater', 1, year, isPaper)}
-      ${hasCoAngler ? sigBlock(coaSig, 'Co-Angler', 2, year, isPaper) : ''}
+      <div style="display:flex;gap:16px;flex:1;">
+        ${sigBlock(boaterSig, 'Boater', 1, year, isPaper)}
+        ${hasCoAngler ? sigBlock(coaSig, 'Co-Angler', 2, year, isPaper) : ''}
+      </div>
     </div>`;
 }
 
@@ -152,24 +154,30 @@ export function contactsToSigs(entry, contacts) {
   };
 }
 
+const WAIVER_EXTRA_CSS = `
+  @page { margin: 0.3in; size: letter portrait; }
+  html, body { margin: 0; }
+  .waiver { max-width: 680px; margin: 0 auto; padding: 10px 12px; display: flex; flex-direction: column; min-height: calc(10.4in); box-sizing: border-box; }
+`;
+
 export function printSingleWaiver(entry, boaterSigUrl, coaSigUrl, settings) {
   const now       = new Date().toISOString();
   const boaterSig = { signature: boaterSigUrl, signedAt: now };
   const coaSig    = coaSigUrl ? { signature: coaSigUrl, signedAt: now } : null;
-  openPrintWindow(makeTitle(entry), waiverHTML(entry, boaterSig, coaSig, settings));
+  openPrintWindow(makeTitle(entry), waiverHTML(entry, boaterSig, coaSig, settings), { extraCss: WAIVER_EXTRA_CSS });
 }
 
 export function viewSingleWaiver(entry, boaterSigUrl, coaSigUrl, settings) {
   const now       = new Date().toISOString();
   const boaterSig = { signature: boaterSigUrl, signedAt: now };
   const coaSig    = coaSigUrl ? { signature: coaSigUrl, signedAt: now } : null;
-  openPrintWindow(makeTitle(entry), waiverHTML(entry, boaterSig, coaSig, settings), { autoPrint: false });
+  openPrintWindow(makeTitle(entry), waiverHTML(entry, boaterSig, coaSig, settings), { autoPrint: false, extraCss: WAIVER_EXTRA_CSS });
 }
 
 export async function viewWaiverForEntry(entry, settings, fetchContactsFn) {
   const contacts = await fetchContactsFn();
   const { boaterSig, coaSig } = contactsToSigs(entry, contacts);
-  openPrintWindow(makeTitle(entry), waiverHTML(entry, boaterSig, coaSig, settings), { autoPrint: false });
+  openPrintWindow(makeTitle(entry), waiverHTML(entry, boaterSig, coaSig, settings), { autoPrint: false, extraCss: WAIVER_EXTRA_CSS });
 }
 
 // formData: optional { boaterFirst, boaterLast, boaterSuffix, boaterPhone, boaterEmail,
@@ -200,13 +208,13 @@ export function printBlankApplication(settings, formData = null) {
   const hasCoAngler = !!(f.coAnglerFirst || f.coAnglerLast);
 
   const blankSigBlock = (label, number) => `
-    <div style="flex:1;min-width:0;">
+    <div style="flex:1;min-width:0;display:flex;flex-direction:column;">
       <div style="font-size:10px;font-weight:700;margin-bottom:3px;color:#333;">
         #${number} ${label} Signature
         <span style="font-weight:400;color:#666;font-size:9px;">(Good through 12/31/${year})</span>
       </div>
-      <div style="border:1px solid #aaa;border-radius:3px;background:#fafafa;min-height:52px;"></div>
-      <div style="font-size:9px;color:#555;margin-top:4px;">Date:${line('', '100px')}</div>
+      <div style="flex:1;border:1px solid #aaa;border-radius:3px;background:#fafafa;min-height:70px;"></div>
+      <div style="font-size:9px;color:#555;margin-top:5px;">Date:${line('', '100px')}</div>
     </div>`;
 
   const html = `
@@ -248,18 +256,22 @@ export function printBlankApplication(settings, formData = null) {
       <p style="font-size:8.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin:0 0 4px;color:#333;">Participant Agreement, Release and Acknowledgment of Risk</p>
       ${clauseP}
 
-      <div style="text-align:center;font-weight:700;font-size:9.5px;border:2px solid #111;padding:4px 10px;margin:6px 0 8px;">
+      <div style="text-align:center;font-weight:700;font-size:9.5px;border:2px solid #111;padding:4px 10px;margin:6px 0 10px;">
         THIS SIGNED WAIVER IS IN EFFECT FOR ANY SUSQUEHANNA FISHING TACKLE, INC. TOURNAMENT IN ${year}
       </div>
 
-      <div style="display:flex;gap:16px;">
+      <div style="display:flex;gap:16px;flex:1;">
         ${blankSigBlock('Boater', 1)}
         ${blankSigBlock('Co-Angler', 2)}
       </div>
     </div>`;
 
   openPrintWindow(`${year} Summer Slam — Entry Form`, html, {
-    extraCss: `@page { margin: 0.3in; size: letter portrait; } .waiver { padding: 8px 10px; }`,
+    extraCss: `
+      @page { margin: 0.3in; size: letter portrait; }
+      html, body { height: 100%; margin: 0; }
+      .waiver { padding: 8px 10px; display: flex; flex-direction: column; min-height: calc(10.4in); box-sizing: border-box; }
+    `,
   });
 }
 
@@ -270,5 +282,12 @@ export function printAllWaivers(signedEntries, contacts, settings) {
     return waiverHTML(entry, boaterSig, coaSig, settings);
   }).join('');
 
-  openPrintWindow(`${year} Summer Slam — Signed Applications`, html);
+  openPrintWindow(`${year} Summer Slam — Signed Applications`, html, {
+    extraCss: `
+      @page { margin: 0.3in; size: letter portrait; }
+      html, body { margin: 0; }
+      .waiver { max-width: 680px; margin: 0 auto; padding: 10px 12px; display: flex; flex-direction: column; min-height: calc(10.4in); box-sizing: border-box; page-break-after: always; }
+      .waiver:last-child { page-break-after: auto; }
+    `,
+  });
 }
