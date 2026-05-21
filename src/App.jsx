@@ -227,13 +227,15 @@ const saveSettingsMut   = useSaveSettings();
 
   async function handleOpenSignApp(entry) {
     const contacts = await fetchContactsWithSignatures();
-    const { boaterSig, coaSig } = contactsToSigs(entry, contacts);
+    const { boaterSig: contactBoaterSig, coaSig: contactCoaSig } = contactsToSigs(entry, contacts);
+    // Fall back to sigs stored on the entry itself (from customer self-sign)
+    const boaterSig = contactBoaterSig ?? (entry.boaterSig    ? { signature: entry.boaterSig,    signedAt: entry.appSignedAt } : null);
+    const coaSig    = contactCoaSig    ?? (entry.coAnglerSig  ? { signature: entry.coAnglerSig,  signedAt: entry.appSignedAt } : null);
     setRosterWaiver({
       entry,
-      // When appSigned=0, co-angler must always draw fresh — only prefill boater
       prefillSigs: {
-        boater:    boaterSig,
-        coAngler:  entry.appSigned === 1 ? coaSig : null,
+        boater:   boaterSig,
+        coAngler: entry.appSigned === 1 ? coaSig : null,
       },
     });
   }

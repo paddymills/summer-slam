@@ -553,14 +553,16 @@ export default function SignUpTab({ onAddEntry, onDeleteEntry, settings, entries
     setOpeningWaiver(entry.id);
     try {
       const contacts = await fetchContactsWithSignatures();
-      const { boaterSig, coaSig } = contactsToSigs(entry, contacts);
+      const { boaterSig: contactBoaterSig, coaSig: contactCoaSig } = contactsToSigs(entry, contacts);
+      // Fall back to sigs stored on the entry from customer self-sign
+      const boaterSig = contactBoaterSig ?? (entry.boaterSig   ? { signature: entry.boaterSig,   signedAt: entry.appSignedAt } : null);
+      const coaSig    = contactCoaSig    ?? (entry.coAnglerSig ? { signature: entry.coAnglerSig, signedAt: entry.appSignedAt } : null);
       setPendingWaiver({
         entry,
         boaterContactId: null,
         coAnglerContactId: null,
         prefillSigs: {
           boater:   boaterSig,
-          // appSigned=0 means co-angler hasn't signed this entry yet — always draw fresh
           coAngler: entry.appSigned === 1 ? coaSig : null,
         },
       });

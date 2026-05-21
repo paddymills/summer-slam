@@ -477,10 +477,23 @@ export default function RosterTab({
         cell: ({ row: { original: r } }) => (
           <span onClick={e => e.stopPropagation()}>
             <button className="btn btn-outline btn-sm" onClick={() => onEdit(r)}>Edit</button>
-            {r.appSigned === 1
-              ? <button className="btn btn-outline btn-sm" onClick={() => viewWaiverForEntry(r, settings, fetchContactsWithSignatures)} style={{ marginLeft: 4 }}>App</button>
-              : <button className="btn btn-outline btn-sm" onClick={() => onSignApp?.(r)} style={{ marginLeft: 4, opacity: 0.7 }}>Sign</button>
-            }
+            {r.appSigned === 1 ? (
+              <>
+                <button className="btn btn-outline btn-sm" onClick={() => viewWaiverForEntry(r, settings, fetchContactsWithSignatures)} style={{ marginLeft: 4 }}>App</button>
+                {r.feeVerified === 0 && (
+                  <button
+                    className="btn btn-sm"
+                    onClick={() => onSignApp?.(r)}
+                    style={{ marginLeft: 4, background: 'rgba(240,173,78,0.15)', border: '1px solid rgba(240,173,78,0.6)', color: '#f0ad4e', fontWeight: 700 }}
+                    title="Customer entered fee — verify and confirm"
+                  >
+                    $? Verify
+                  </button>
+                )}
+              </>
+            ) : (
+              <button className="btn btn-outline btn-sm" onClick={() => onSignApp?.(r)} style={{ marginLeft: 4, opacity: 0.7 }}>Sign</button>
+            )}
             <button className="btn btn-danger btn-sm" onClick={() => onDelete(r.id)} style={{ marginLeft: 4 }}>Del</button>
           </span>
         ),

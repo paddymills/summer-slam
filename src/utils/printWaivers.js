@@ -233,7 +233,10 @@ export function viewArchivedWaiver(entry, boaterSig, coaSig, settings) {
 
 export async function viewWaiverForEntry(entry, settings, fetchContactsFn) {
   const contacts = await fetchContactsFn();
-  const { boaterSig, coaSig } = contactsToSigs(entry, contacts);
+  const { boaterSig: contactBoaterSig, coaSig: contactCoaSig } = contactsToSigs(entry, contacts);
+  // Fall back to sigs stored on the entry itself (from customer self-sign)
+  const boaterSig = contactBoaterSig ?? (entry.boaterSig   ? { signature: entry.boaterSig,   signedAt: entry.appSignedAt } : null);
+  const coaSig    = contactCoaSig    ?? (entry.coAnglerSig ? { signature: entry.coAnglerSig, signedAt: entry.appSignedAt } : null);
   openPrintWindow(makeTitle(entry), waiverHTML(entry, boaterSig, coaSig, settings), { autoPrint: false, extraCss: WAIVER_EXTRA_CSS });
 }
 
