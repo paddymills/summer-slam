@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { updateEntry, saveContactWaiver, lookupContactId, signEntryAsCustomer } from '../utils/api';
+import { updateEntry, saveContactWaiver, lookupContactId, signEntryAsCustomer, searchContacts, upsertContacts } from '../utils/api';
 import { printSingleWaiver, waiverHTMLTemplate, shareSignedWaiver } from '../utils/printWaivers';
 import { formatPhone } from '../utils/phone';
 
@@ -134,6 +134,18 @@ function isCanvasBlank(canvas) {
   return true;
 }
 
+function levenshtein(a, b) {
+  const m = a.length, n = b.length;
+  const dp = [];
+  for (let i = 0; i <= m; i++) { dp[i] = [i]; for (let j = 1; j <= n; j++) dp[i][j] = i === 0 ? j : 0; }
+  for (let i = 1; i <= m; i++)
+    for (let j = 1; j <= n; j++)
+      dp[i][j] = a[i-1] === b[j-1] ? dp[i-1][j-1] : 1 + Math.min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]);
+  return dp[m][n];
+}
+
+function normName(s) { return (s || '').trim().toLowerCase().replace(/\s+/g, ' '); }
+
 function ReadOnlySigBlock({ sig, label, number }) {
   const year = new Date().getFullYear();
   const sigDate = sig?.signedAt
@@ -202,6 +214,7 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
   const [error,         setError]         = useState('');
   const [submitted,     setSubmitted]     = useState(false);
   const [submittedSigs, setSubmittedSigs] = useState(null); // { boater, coAngler, result }
+  const [nearDupPrompt, setNearDupPrompt] = useState(null);
   const pinRef = useRef(null);
 
   // Auto-focus PIN field when it appears
@@ -319,6 +332,89 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
     }
   }
 
+  async function resolveContacts({ boaterInfo, coaInfo, boaterSigUrl, coaSigUrl, waiverHtml, now, snapshot, result }) {
+    const anglers = [
+      { ...boaterInfo, role: 'boater', sigUrl: boaterSigUrl },
+      ...(coaInfo ? [{ ...coaInfo, role: 'coAngler', sigUrl: coaSigUrl }] : []),
+    ];
+
+    const warnings = [];
+
+    for (const angler of anglers) {
+      if (angler.prefilled) continue;
+
+      if (angler.cid) {
+        try { await saveContactWaiver(angler.cid, { signature: angler.sigUrl, signedAt: now, waiverYear: year, waiverSnapshot: snapshot, waiverHtml }); } catch (_) {}
+        continue;
+      }
+
+      const candidates = await searchContacts(`${angler.first} ${angler.last}`).catch(() => []);
+      const entNorm = normName(`${angler.first} ${angler.last}`);
+
+      const exact = candidates.find(c =>
+        normName(c.firstName) === normName(angler.first) &&
+        normName(c.lastName)  === normName(angler.last)
+      );
+
+      if (exact) {
+        try { await saveContactWaiver(exact.id, { signature: angler.sigUrl, signedAt: now, waiverYear: year, waiverSnapshot: snapshot, waiverHtml }); } catch (_) {}
+        continue;
+      }
+
+      const nearMatches = candidates.filter(c => levenshtein(entNorm, normName(`${c.firstName} ${c.lastName}`)) <= 2);
+
+      if (nearMatches.length > 0) {
+        warnings.push({ role: angler.role, entered: `${angler.first} ${angler.last}`, match: nearMatches[0], sigUrl: angler.sigUrl, angler });
+      } else {
+        // No match — create new contact and save sig
+        try {
+          await upsertContacts([{ firstName: angler.first, lastName: angler.last, phone: angler.phone, email: angler.email }]);
+          const cid = await lookupContactId(angler.first, angler.last, angler.phone);
+          if (cid) await saveContactWaiver(cid, { signature: angler.sigUrl, signedAt: now, waiverYear: year, waiverSnapshot: snapshot, waiverHtml });
+        } catch (_) {}
+      }
+    }
+
+    if (warnings.length > 0) {
+      setNearDupPrompt({ warnings, idx: 0, decisions: {}, saveData: { boaterSigUrl, coaSigUrl, waiverHtml, now, snapshot }, result });
+      return;
+    }
+
+    setSubmittedSigs({ boater: boaterSigUrl, coAngler: coaSigUrl, result });
+    setSubmitted(true);
+  }
+
+  async function handleNearDupDecision(useExisting) {
+    const { warnings, idx, decisions, saveData, result } = nearDupPrompt;
+    const newDecisions = { ...decisions, [idx]: useExisting ? 'existing' : 'new' };
+
+    if (idx + 1 < warnings.length) {
+      setNearDupPrompt({ ...nearDupPrompt, idx: idx + 1, decisions: newDecisions });
+      return;
+    }
+
+    setNearDupPrompt(null);
+    setSubmitting(true);
+    try {
+      for (let i = 0; i < warnings.length; i++) {
+        const w = warnings[i];
+        try {
+          if (newDecisions[i] === 'existing') {
+            await saveContactWaiver(w.match.id, { signature: w.sigUrl, signedAt: saveData.now, waiverYear: year, waiverSnapshot: saveData.snapshot, waiverHtml: saveData.waiverHtml });
+          } else {
+            await upsertContacts([{ firstName: w.angler.first, lastName: w.angler.last, phone: w.angler.phone, email: w.angler.email }]);
+            const cid = await lookupContactId(w.angler.first, w.angler.last, w.angler.phone);
+            if (cid) await saveContactWaiver(cid, { signature: w.sigUrl, signedAt: saveData.now, waiverYear: year, waiverSnapshot: saveData.snapshot, waiverHtml: saveData.waiverHtml });
+          }
+        } catch (_) {}
+      }
+      setSubmittedSigs({ boater: saveData.boaterSigUrl, coAngler: saveData.coaSigUrl, result });
+      setSubmitted(true);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   async function handleSubmit(pinVerified = false) {
     if (!unlocked && !pinVerified) { setError('Operator must enter their PIN to unlock and record fees before submitting.'); return; }
     const amount = usesSplitFeeUI
@@ -363,27 +459,13 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
         ? (prefillSigs?.coAngler?.signature ?? captureSig(coAnglerCanvasRef.current))
         : null;
 
-      // 3. Save newly drawn boater sig to contact (skip if prefilled — already on file)
-      if (!prefillSigs?.boater?.signature) {
-        let boaterCid = boaterContactId;
-        if (!boaterCid) boaterCid = await lookupContactId(entry.boaterFirst, entry.boaterLast, effectiveBoaterPhone);
-        if (boaterCid) {
-          await saveContactWaiver(boaterCid, { signature: boaterSigUrl, signedAt: now, waiverYear: year, waiverSnapshot: snapshot, waiverHtml });
-        }
-      }
-
-      // 4. Save newly drawn co-angler sig to contact (skip if prefilled — already on file)
-      if (hasCoAngler && !prefillSigs?.coAngler?.signature) {
-        let coaCid = coAnglerContactId;
-        if (!coaCid) coaCid = await lookupContactId(entry.coAnglerFirst, entry.coAnglerLast, effectiveCoAnglerPhone);
-        if (coaCid) {
-          await saveContactWaiver(coaCid, { signature: coaSigUrl, signedAt: now, waiverYear: year, waiverSnapshot: snapshot, waiverHtml });
-        }
-      }
-
       const result = { appSigned: 1, buyIn: amount, lunker: lunkerChecked ? 1 : 0, option: optionChecked ? 1 : 0, paid };
-      setSubmittedSigs({ boater: boaterSigUrl, coAngler: coaSigUrl, result });
-      setSubmitted(true);
+      // Upsert/match contacts with near-duplicate detection (sets submitted state internally)
+      await resolveContacts({
+        boaterInfo: { cid: boaterContactId, first: entry.boaterFirst, last: entry.boaterLast, phone: effectiveBoaterPhone, email: entry.boaterEmail, prefilled: !!prefillSigs?.boater?.signature },
+        coaInfo: hasCoAngler ? { cid: coAnglerContactId, first: entry.coAnglerFirst, last: entry.coAnglerLast, phone: effectiveCoAnglerPhone, email: entry.coAnglerEmail, prefilled: !!prefillSigs?.coAngler?.signature } : null,
+        boaterSigUrl, coaSigUrl, waiverHtml, now, snapshot, result,
+      });
     } catch (e) {
       setError(e.message || 'Failed to save application. Please try again.');
     } finally {
@@ -396,6 +478,53 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
 
   return (
     <div style={OVERLAY}>
+      {/* ── Near-Duplicate Contact Warning ── */}
+      {nearDupPrompt && (() => {
+        const w = nearDupPrompt.warnings[nearDupPrompt.idx];
+        const roleLabel = w.role === 'boater' ? 'Boater' : 'Co-Angler';
+        return (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 1100, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+            <div style={{ background: '#fff', borderRadius: 12, padding: '28px 24px', maxWidth: 480, width: '100%', boxSizing: 'border-box', fontFamily: 'system-ui, sans-serif' }}>
+              <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: '#7f4f00' }}>⚠ Similar {roleLabel} Contact Found</div>
+              <div style={{ fontSize: 13, color: '#555', marginBottom: 20, lineHeight: 1.6 }}>
+                The name entered is very similar to an existing contact. Is this the same person?
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 20 }}>
+                <div style={{ background: '#fff3cd', border: '1.5px solid #ffc107', borderRadius: 8, padding: '12px 14px' }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#856404', marginBottom: 6 }}>Customer Entered</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: '#333' }}>{w.entered}</div>
+                </div>
+                <div style={{ background: '#e8f4fd', border: '1.5px solid #3498db', borderRadius: 8, padding: '12px 14px' }}>
+                  <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1, color: '#1a5276', marginBottom: 6 }}>Existing Contact</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: '#333' }}>{w.match.firstName} {w.match.lastName}</div>
+                  {w.match.phone && <div style={{ fontSize: 12, color: '#555', marginTop: 3 }}>{w.match.phone}</div>}
+                </div>
+              </div>
+              {nearDupPrompt.warnings.length > 1 && (
+                <div style={{ fontSize: 12, color: '#888', marginBottom: 14, textAlign: 'center' }}>
+                  {nearDupPrompt.idx + 1} of {nearDupPrompt.warnings.length}
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  type="button"
+                  onClick={() => handleNearDupDecision(false)}
+                  style={{ flex: 1, padding: '12px 0', borderRadius: 8, border: '1.5px solid #bbb', background: '#f5f5f5', fontSize: 14, fontWeight: 600, cursor: 'pointer', color: '#333' }}
+                >
+                  No — Create New
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleNearDupDecision(true)}
+                  style={{ flex: 1, padding: '12px 0', borderRadius: 8, border: 'none', background: '#1a5276', fontSize: 14, fontWeight: 700, cursor: 'pointer', color: '#fff' }}
+                >
+                  Yes — Use "{w.match.firstName} {w.match.lastName}"
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
       <div style={PAPER}>
 
         {/* ── Header ── */}
