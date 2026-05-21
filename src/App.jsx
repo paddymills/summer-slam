@@ -455,28 +455,48 @@ const saveSettingsMut   = useSaveSettings();
     if (!/^\d{4}$/.test(label)) { alert('Year must be a 4-digit number (e.g. 2025).'); return; }
     if (!confirm(`Archive ${rankedEntries.length} entries as "${label}"?\n\nAny existing archive for ${label} will be replaced.`)) return;
     try {
-      const payload = rankedEntries.map(e => ({
-        place:         e._rank,
-        boaterFirst:   e.boaterFirst,   boaterLast:    e.boaterLast,
-        boaterPhone:   e.boaterPhone,   boaterEmail:   e.boaterEmail,
-        coAnglerFirst: e.coAnglerFirst, coAnglerLast:  e.coAnglerLast,
-        coAnglerPhone: e.coAnglerPhone, coAnglerEmail: e.coAnglerEmail,
-        boatNo:        e.boatNo,
-        numFish:       e.numFish,
-        lunkerWeight:  e.lunkerWeight,
-        totalWeight:   e.totalWeight,
-        rawWeight:     e.rawWeight,
-        deadFish:      e.deadFish,
-        shortFish:     e.shortFish,
-        lunker:        e.lunker,        option:        e.option,
-        paid:          e.paid,          appSigned:     e.appSigned,
-        buyIn:         e.buyIn,
-        needsAttention: e.needsAttention,
-        weighedAt:    e.weighedAt,
-        signedUpAt:   e.signedUpAt,
-        checkedInAt:  e.checkedInAt,
-        offWaterAt:   e.offWaterAt,
-      }));
+      const allContacts = await fetchContactsWithSignatures();
+      const norm = s => (s || '').toLowerCase().trim();
+      const findContact = (fn, ln, ph) => {
+        const digits = (ph || '').replace(/\D/g, '');
+        return allContacts.find(c =>
+          norm(c.firstName) === norm(fn) && norm(c.lastName) === norm(ln) &&
+          (!digits || !(c.phone || '').replace(/\D/g, '') || (c.phone || '').replace(/\D/g, '') === digits)
+        ) ?? allContacts.find(c => norm(c.firstName) === norm(fn) && norm(c.lastName) === norm(ln)) ?? null;
+      };
+      const payload = rankedEntries.map(e => {
+        const bc  = findContact(e.boaterFirst,   e.boaterLast,   e.boaterPhone);
+        const cac = (e.coAnglerFirst && e.coAnglerLast)
+          ? findContact(e.coAnglerFirst, e.coAnglerLast, e.coAnglerPhone)
+          : null;
+        return {
+          place:           e._rank,
+          boaterFirst:     e.boaterFirst,     boaterLast:      e.boaterLast,    boaterSuffix:   e.boaterSuffix   ?? '',
+          boaterPhone:     e.boaterPhone,     boaterEmail:     e.boaterEmail,
+          coAnglerFirst:   e.coAnglerFirst,   coAnglerLast:    e.coAnglerLast,  coAnglerSuffix: e.coAnglerSuffix ?? '',
+          coAnglerPhone:   e.coAnglerPhone,   coAnglerEmail:   e.coAnglerEmail,
+          boatNo:          e.boatNo,
+          boaterOrderNo:   e.boaterOrderNo    ?? '',
+          coAnglerOrderNo: e.coAnglerOrderNo  ?? '',
+          numFish:         e.numFish,
+          lunkerWeight:    e.lunkerWeight,
+          totalWeight:     e.totalWeight,
+          rawWeight:       e.rawWeight,
+          deadFish:        e.deadFish,         shortFish:       e.shortFish,
+          lunker:          e.lunker,            option:          e.option,
+          paid:            e.paid,              appSigned:       e.appSigned,
+          buyIn:           e.buyIn,
+          needsAttention:  e.needsAttention,
+          weighedAt:       e.weighedAt,
+          signedUpAt:      e.signedUpAt,
+          checkedInAt:     e.checkedInAt,
+          offWaterAt:      e.offWaterAt,
+          appSignedAt:     e.appSignedAt       ?? null,
+          boaterSignature:   bc?.signature       ?? null,
+          coAnglerSignature: cac?.signature      ?? null,
+          waiverSnapshot:    bc?.waiverSnapshot  ?? cac?.waiverSnapshot ?? null,
+        };
+      });
       await archiveEntries(label, payload);
       showToast(`${rankedEntries.length} entries archived as ${label}`, 'success');
     } catch {
@@ -647,6 +667,7 @@ const saveSettingsMut   = useSaveSettings();
             isUnlocked={isAdmin}
             rosterCount={rawEntries.length}
             onLoadArchive={handleLoadArchive}
+            settings={settingsWithTheme}
           />
         </div>
         <div style={{ display: activeTab === 'flights' ? 'contents' : 'none' }}>

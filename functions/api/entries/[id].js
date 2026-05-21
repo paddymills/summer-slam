@@ -59,7 +59,7 @@ export async function onRequestPut({ params, request, env }) {
     const clientUpdatedAt   = body.updatedAt  ? String(body.updatedAt)  : null;
 
     // Snapshot before state for event comparison
-    const beforeResult = await db.execute({ sql: 'SELECT boat_no, total_weight, off_water_at FROM entries WHERE id=?', args: [params.id] });
+    const beforeResult = await db.execute({ sql: 'SELECT boat_no, total_weight, off_water_at, checked_in_at, app_signed FROM entries WHERE id=?', args: [params.id] });
     const before = beforeResult.rows[0] ?? {};
 
     const result = await db.execute({
@@ -72,7 +72,7 @@ export async function onRequestPut({ params, request, env }) {
               boater_order_no=?, co_angler_order_no=?,
               signed_up_at  = CASE WHEN signed_up_at IS NULL AND ? != '' THEN CURRENT_TIMESTAMP ELSE signed_up_at END,
               weighed_at   = CASE WHEN ? > 0 AND ? = 0 THEN COALESCE(?, CURRENT_TIMESTAMP) ELSE weighed_at END,
-              checked_in_at = CASE WHEN ? != '' AND checked_in_at IS NULL THEN CURRENT_TIMESTAMP ELSE checked_in_at END,
+              checked_in_at = CASE WHEN ? = 1 AND checked_in_at IS NULL THEN CURRENT_TIMESTAMP ELSE checked_in_at END,
               off_water_at  = CASE WHEN ? = 1 THEN NULLIF(?, '') WHEN ? = 1 THEN COALESCE(off_water_at, CURRENT_TIMESTAMP) WHEN ? = 0 THEN NULL ELSE off_water_at END,
               app_signed_at = CASE WHEN ? = 1 AND app_signed_at IS NULL THEN CURRENT_TIMESTAMP WHEN ? = 0 THEN NULL ELSE app_signed_at END,
               updated_at   = CURRENT_TIMESTAMP
@@ -97,7 +97,7 @@ export async function onRequestPut({ params, request, env }) {
         t(body.coAnglerOrderNo ?? ''),
         t(body.boaterFirst),
         newTotalWeight, preserveWeighTime, clientWeighedAt,
-        t(body.boatNo),
+        body.markCheckedIn ? 1 : 0,
         body.offWaterAtDirect ? 1 : 0,
         body.offWaterAtDirect ? (body.offWaterAt || '') : '',
         body.offWater === true ? 1 : body.offWater === false ? 0 : -1,
@@ -142,10 +142,19 @@ export async function onRequestPut({ params, request, env }) {
       await db.execute('CREATE TABLE IF NOT EXISTS event_log (id INTEGER PRIMARY KEY AUTOINCREMENT, event_type TEXT NOT NULL, entry_id INTEGER, boat_no TEXT, boater_name TEXT, value TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)');
       const events = [];
 
-      // Check-in: boatNo newly assigned or changed
+      // Check-in: physical arrival marked from check-in tab
+      if (body.markCheckedIn && !before.checked_in_at) {
+        events.push({ sql: 'INSERT INTO event_log (event_type, entry_id, boat_no, boater_name, value) VALUES (?,?,?,?,?)', args: ['checkin', params.id, afterBoat, boaterName, 'arrived'] });
+      }
+      // Signed: appSigned newly set to 1
+      const wasUnsigned = Number(before.app_signed) !== 1;
+      if (wasUnsigned && Number(body.appSigned) === 1) {
+        events.push({ sql: 'INSERT INTO event_log (event_type, entry_id, boat_no, boater_name, value) VALUES (?,?,?,?,?)', args: ['signed', params.id, afterBoat, boaterName, 'signed'] });
+      }
+      // Boat# assigned or changed (draw / manual edit)
       const newBoatNo = t(body.boatNo);
       if (newBoatNo && (before.boat_no ?? '') !== newBoatNo) {
-        events.push({ sql: 'INSERT INTO event_log (event_type, entry_id, boat_no, boater_name, value) VALUES (?,?,?,?,?)', args: ['checkin', params.id, newBoatNo, boaterName, newBoatNo] });
+        events.push({ sql: 'INSERT INTO event_log (event_type, entry_id, boat_no, boater_name, value) VALUES (?,?,?,?,?)', args: ['boatdraw', params.id, newBoatNo, boaterName, newBoatNo] });
       }
 
       // Check-out: off-water toggled either direction

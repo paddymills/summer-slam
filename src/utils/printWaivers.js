@@ -180,6 +180,11 @@ export function viewSingleWaiver(entry, boaterSigUrl, coaSigUrl, settings) {
   openPrintWindow(makeTitle(entry), waiverHTML(entry, boaterSig, coaSig, settings), { autoPrint: false, extraCss: WAIVER_EXTRA_CSS });
 }
 
+// For archived waivers where we already have { signature, signedAt } objects
+export function viewArchivedWaiver(entry, boaterSig, coaSig, settings) {
+  openPrintWindow(makeTitle(entry), waiverHTML(entry, boaterSig, coaSig, settings), { autoPrint: false, extraCss: WAIVER_EXTRA_CSS });
+}
+
 export async function viewWaiverForEntry(entry, settings, fetchContactsFn) {
   const contacts = await fetchContactsFn();
   const { boaterSig, coaSig } = contactsToSigs(entry, contacts);

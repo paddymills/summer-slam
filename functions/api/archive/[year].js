@@ -37,6 +37,12 @@ function toJS(row, hidePI = false) {
     signedUpAt:     row.signed_up_at    ?? null,
     checkedInAt:    row.checked_in_at   ?? null,
     offWaterAt:     row.off_water_at    ?? null,
+    appSignedAt:       row.app_signed_at      ?? null,
+    boaterOrderNo:     row.boater_order_no    ?? '',
+    coAnglerOrderNo:   row.co_angler_order_no ?? '',
+    boaterSignature:   hidePI ? null : (row.boater_signature    ?? null),
+    coAnglerSignature: hidePI ? null : (row.co_angler_signature ?? null),
+    waiverSnapshot:    row.waiver_snapshot    ?? null,
   };
 }
 

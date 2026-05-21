@@ -17,12 +17,22 @@ export async function onRequestGet({ env }) {
 }
 
 // POST /api/archive — snapshot current entries for a year
-// Body: { year: string, entries: [{place, boaterFirst, boaterLast, coAnglerFirst, coAnglerLast, boatNo, numFish, lunkerWeight, totalWeight}] }
+// Body: { year: string, entries: [{...}] }
 export async function onRequestPost({ request, env }) {
   if (!checkAuth(request, env)) return Response.json({ error: 'Unauthorized' }, { status: 401 });
   try {
     const db = getDb(env);
     const { year, entries } = await request.json();
+
+    // Best-effort migration: add columns added after initial schema
+    for (const sql of [
+      "ALTER TABLE archives ADD COLUMN app_signed_at TEXT",
+      "ALTER TABLE archives ADD COLUMN boater_order_no TEXT DEFAULT ''",
+      "ALTER TABLE archives ADD COLUMN co_angler_order_no TEXT DEFAULT ''",
+      "ALTER TABLE archives ADD COLUMN boater_signature TEXT",
+      "ALTER TABLE archives ADD COLUMN co_angler_signature TEXT",
+      "ALTER TABLE archives ADD COLUMN waiver_snapshot TEXT",
+    ]) { try { await db.execute(sql); } catch (_) {} }
     if (!year || !Array.isArray(entries)) {
       return Response.json({ error: 'year and entries are required' }, { status: 400 });
     }
@@ -40,8 +50,10 @@ export async function onRequestPost({ request, env }) {
                  boat_no, num_fish, lunker_weight, total_weight, raw_weight, dead_fish, short_fish,
                  boater_phone, boater_email, co_angler_phone, co_angler_email,
                  lunker, option_field, paid, app_signed, buy_in, needs_attention,
-                 weighed_at, signed_up_at, checked_in_at, off_water_at)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                 weighed_at, signed_up_at, checked_in_at, off_water_at,
+                 app_signed_at, boater_order_no, co_angler_order_no,
+                 boater_signature, co_angler_signature, waiver_snapshot)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         args: [
           String(year),
           e.place != null ? Number(e.place) : null,
@@ -72,6 +84,12 @@ export async function onRequestPost({ request, env }) {
           e.signedUpAt   ?? null,
           e.checkedInAt  ?? null,
           e.offWaterAt   ?? null,
+          e.appSignedAt        ?? null,
+          e.boaterOrderNo      ?? '',
+          e.coAnglerOrderNo    ?? '',
+          e.boaterSignature    ?? null,
+          e.coAnglerSignature  ?? null,
+          e.waiverSnapshot     ?? null,
         ],
       })),
     ];

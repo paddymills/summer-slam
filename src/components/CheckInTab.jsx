@@ -3,6 +3,14 @@ import { formatPhone } from '../utils/phone';
 
 function isOn(v) { return v === 1 || v === '1'; }
 
+function fmtTime(ts) {
+  if (!ts) return '';
+  const iso = ts.includes('T') ? ts : ts.replace(' ', 'T');
+  const d = new Date(iso.endsWith('Z') || iso.includes('+') ? iso : iso + 'Z');
+  if (isNaN(d)) return '';
+  return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
 const INPUT_STYLE = {
   background: 'rgba(255,255,255,0.07)',
   border: '1px solid rgba(139,180,225,0.28)',
@@ -92,7 +100,6 @@ export default function CheckInTab({ entries, onSave }) {
       coAnglerLast:  row.coAnglerLast  || '',
       coAnglerPhone: formatPhone(row.coAnglerPhone || ''),
       coAnglerEmail: row.coAnglerEmail || '',
-      boatNo:    row.boatNo    || '',
       lunker:    row.lunker    ?? '',
       option:    row.option    ?? '',
       paid:      row.paid      ?? '',
@@ -115,7 +122,7 @@ export default function CheckInTab({ entries, onSave }) {
   async function handleSave(row) {
     setSaving(true);
     try {
-      await onSave(row.id, draft);
+      await onSave(row.id, { ...draft, markCheckedIn: true });
       setExpandedId(null);
       setDraft({});
       setQuery('');
@@ -174,7 +181,7 @@ export default function CheckInTab({ entries, onSave }) {
             const isOpen = expandedId === row.id;
             const appNotSigned = !isOn(row.appSigned);
             const notPaid = !isOn(row.paid);
-            const alreadyCheckedIn = !!row.boatNo;
+            const alreadyCheckedIn = !!row.checkedInAt;
             return (
               <div key={row.id} style={{
                 borderRadius: 8,
@@ -200,9 +207,11 @@ export default function CheckInTab({ entries, onSave }) {
                       {[row.boaterFirst, row.boaterLast, row.boaterSuffix].filter(Boolean).join(' ')}
                     </div>
                     <div style={{ fontSize: 12, color: alreadyCheckedIn ? '#4CAF50' : 'var(--header-bg)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {alreadyCheckedIn ? `✓ Checked in — Boat #${row.boatNo}` : row.coAnglerFirst || row.coAnglerLast
-                        ? [row.coAnglerFirst, row.coAnglerLast, row.coAnglerSuffix].filter(Boolean).join(' ')
-                        : 'No co-angler'}
+                      {alreadyCheckedIn
+                        ? `✓ Arrived${row.checkedInAt ? ' · ' + fmtTime(row.checkedInAt) : ''}`
+                        : row.coAnglerFirst || row.coAnglerLast
+                          ? [row.coAnglerFirst, row.coAnglerLast, row.coAnglerSuffix].filter(Boolean).join(' ')
+                          : 'No co-angler'}
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
@@ -293,9 +302,16 @@ export default function CheckInTab({ entries, onSave }) {
                          onChange={v => set('coAnglerEmail', v)} />
                     </div>
 
-                    {/* Boat #, Lunker, Option */}
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, alignItems: 'end', marginTop: 6 }}>
-                      <F id="ci-boat-no" label="Boat #" inputMode="numeric" value={draft.boatNo} onChange={v => set('boatNo', v)} />
+                    {/* Boat # (read-only — assigned via draw) */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 10px', borderRadius: 6, background: 'rgba(139,180,225,0.07)', border: '1px solid rgba(139,180,225,0.18)', marginTop: 4 }}>
+                      <span style={{ ...LABEL_STYLE, marginBottom: 0 }}>Boat</span>
+                      <span style={{ color: row.boatNo ? 'var(--gold-light)' : 'var(--header-bg)', fontWeight: 700, fontSize: 16 }}>
+                        {row.boatNo ? `#${row.boatNo}` : '— not assigned'}
+                      </span>
+                    </div>
+
+                    {/* Lunker, Option */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, alignItems: 'end', marginTop: 2 }}>
                       <ToggleField label="Lunker" on={isOn(draft.lunker)} onToggle={() => toggle('lunker')} />
                       <ToggleField label="Option" on={isOn(draft.option)} onToggle={() => toggle('option')} />
                     </div>
@@ -331,7 +347,7 @@ export default function CheckInTab({ entries, onSave }) {
                     {/* Actions */}
                     <div style={{ display: 'flex', gap: 8 }}>
                       <button type="submit" className="btn btn-primary btn-sm" style={{ flex: 1 }} disabled={saving}>
-                        {saving ? 'Saving…' : 'Save'}
+                        {saving ? (alreadyCheckedIn ? 'Saving…' : 'Checking In…') : (alreadyCheckedIn ? 'Save' : 'Check In')}
                       </button>
                       <button type="button" className="btn btn-outline btn-sm" onClick={() => { setExpandedId(null); setDraft({}); }}>
                         Cancel

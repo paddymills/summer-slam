@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { fetchArchiveYears, fetchArchive } from '../utils/api';
 import { exportHTML } from '../utils/exportHtml';
+import { viewArchivedWaiver } from '../utils/printWaivers';
 
-export default function ArchiveTab({ isUnlocked, rosterCount, onLoadArchive }) {
+export default function ArchiveTab({ isUnlocked, rosterCount, onLoadArchive, settings }) {
   const [years, setYears]       = useState([]);
   const [activeYear, setActiveYear] = useState(null);
   const [entries, setEntries]   = useState([]);
@@ -123,7 +124,7 @@ export default function ArchiveTab({ isUnlocked, rosterCount, onLoadArchive }) {
             <div style={{ textAlign: 'center', padding: 40, color: 'var(--header-bg)' }}>Loading…</div>
           ) : (
             <div className="table-wrapper">
-              <table className="roster-table" style={{ tableLayout: 'fixed', minWidth: 700 }}>
+              <table className="roster-table" style={{ tableLayout: 'fixed', minWidth: 760 }}>
                 <colgroup>
                   <col style={{ width: 60 }} />
                   <col />
@@ -134,6 +135,7 @@ export default function ArchiveTab({ isUnlocked, rosterCount, onLoadArchive }) {
                   <col style={{ width: 96 }} />
                   <col style={{ width: 64 }} />
                   <col style={{ width: 110 }} />
+                  <col style={{ width: 80 }} />
                 </colgroup>
                 <thead>
                   <tr>
@@ -146,12 +148,14 @@ export default function ArchiveTab({ isUnlocked, rosterCount, onLoadArchive }) {
                     <th style={{ textAlign: 'right' }}>Lunker (lbs)</th>
                     <th style={{ textAlign: 'center' }}># Fish</th>
                     <th style={{ textAlign: 'right' }}>Total Wt (lbs)</th>
+                    <th style={{ textAlign: 'center' }}>Waiver</th>
                   </tr>
                 </thead>
                 <tbody>
                   {entries.map(row => {
                     const rank = row.place;
                     const rankClass = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : '';
+                    const hasSig = !!(row.boaterSignature || row.coAnglerSignature);
                     return (
                       <tr key={row.id}>
                         <td className={`rank-cell ${rankClass}`}>{rank ?? ''}</td>
@@ -175,6 +179,30 @@ export default function ArchiveTab({ isUnlocked, rosterCount, onLoadArchive }) {
                               </span>
                             )}
                           </span>
+                        </td>
+                        <td style={{ textAlign: 'center', padding: '6px 8px' }}>
+                          {hasSig ? (
+                            <button
+                              className="btn btn-outline btn-sm"
+                              style={{ fontSize: 11, padding: '3px 8px' }}
+                              onClick={() => {
+                                const snap = row.waiverSnapshot ? JSON.parse(row.waiverSnapshot) : {};
+                                const sigDate = row.appSignedAt ?? null;
+                                viewArchivedWaiver(
+                                  row,
+                                  row.boaterSignature    ? { signature: row.boaterSignature,    signedAt: sigDate } : null,
+                                  row.coAnglerSignature  ? { signature: row.coAnglerSignature,  signedAt: sigDate } : null,
+                                  { ...settings, tournamentDate: snap.tournamentDate ?? settings?.tournamentDate, tournamentLocation: snap.tournamentLocation ?? settings?.tournamentLocation },
+                                );
+                              }}
+                            >
+                              View
+                            </button>
+                          ) : (
+                            <span style={{ color: 'var(--header-bg)', fontSize: 11 }}>
+                              {row.appSigned ? 'Paper' : '—'}
+                            </span>
+                          )}
                         </td>
                       </tr>
                     );
