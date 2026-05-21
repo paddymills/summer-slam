@@ -46,10 +46,23 @@ const EMPTY = {
   boaterOrderNo: '', coAnglerOrderNo: '',
 };
 
-function PublicSignUpView({ settings }) {
-  const [form, setForm] = useState({ ...EMPTY });
+function PublicSignUpView({ settings, entries = [], onEntriesRefresh }) {
+  const [form, setForm]               = useState({ ...EMPTY });
+  const [searchName, setSearchName]   = useState('');
+  const [customerWaiver, setCustomerWaiver] = useState(null);
 
   function set(field, val) { setForm(prev => ({ ...prev, [field]: val })); }
+
+  const norm = s => (s || '').toLowerCase().trim();
+  const matchingEntries = searchName.trim().length >= 2
+    ? entries.filter(e => {
+        const q = norm(searchName);
+        const boaterFull = norm(`${e.boaterFirst} ${e.boaterLast}`);
+        const coaFull    = norm(`${e.coAnglerFirst} ${e.coAnglerLast}`);
+        return boaterFull.includes(q) || coaFull.includes(q)
+          || norm(e.boaterLast).startsWith(q) || norm(e.coAnglerLast).startsWith(q);
+      })
+    : [];
 
   return (
     <div className="tab-panel active">
@@ -194,8 +207,77 @@ function PublicSignUpView({ settings }) {
 
           </form>
 
+          {/* ── Find My Entry (digital self-sign) ── */}
+          <div style={{ marginTop: 36, borderTop: '1px solid rgba(139,180,225,0.2)', paddingTop: 24 }}>
+            <h3 style={{ color: 'var(--gold-light)', fontSize: 16, fontWeight: 700, marginBottom: 8 }}>
+              Already signed up? Sign digitally.
+            </h3>
+            <p style={{ fontSize: 13, color: 'var(--header-bg)', marginBottom: 14, lineHeight: 1.6 }}>
+              Search for your name, then tap <strong style={{ color: 'var(--white)' }}>Sign Application</strong> to sign digitally on your device.
+              Your buy-in amount will be self-reported and verified by tournament staff.
+            </p>
+            <input
+              type="text"
+              value={searchName}
+              onChange={e => setSearchName(e.target.value)}
+              placeholder="Search by last name…"
+              style={{ ...FIELD, marginBottom: 10 }}
+            />
+            {searchName.trim().length >= 2 && matchingEntries.length === 0 && (
+              <p style={{ fontSize: 12, color: 'var(--header-bg)', textAlign: 'center', padding: '12px 0' }}>
+                No entries found. Check spelling or contact tournament staff.
+              </p>
+            )}
+            {matchingEntries.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {matchingEntries.map(e => {
+                  const boaterName = [e.boaterFirst, e.boaterLast, e.boaterSuffix].filter(Boolean).join(' ');
+                  const coaName    = [e.coAnglerFirst, e.coAnglerLast, e.coAnglerSuffix].filter(Boolean).join(' ');
+                  const isSigned   = e.appSigned === 1 || e.appSigned === '1';
+                  return (
+                    <div key={e.id} style={{
+                      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                      background: 'rgba(255,255,255,0.05)', borderRadius: 8,
+                      border: '1px solid rgba(139,180,225,0.2)',
+                      padding: '10px 14px', gap: 12,
+                    }}>
+                      <div>
+                        <div style={{ fontWeight: 700, color: 'var(--white)', fontSize: 14 }}>{boaterName}</div>
+                        {coaName && <div style={{ fontSize: 12, color: 'var(--header-bg)', marginTop: 2 }}>/ {coaName}</div>}
+                      </div>
+                      {isSigned ? (
+                        <span style={{ fontSize: 12, color: '#6fcf97', whiteSpace: 'nowrap', fontWeight: 600 }}>✓ Already signed</span>
+                      ) : (
+                        <button
+                          type="button"
+                          className="btn btn-gold"
+                          style={{ fontSize: 13, padding: '8px 16px', whiteSpace: 'nowrap' }}
+                          onClick={() => setCustomerWaiver(e)}
+                        >
+                          Sign Application
+                        </button>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
         </div>
       </div>
+      {customerWaiver && (
+        <WaiverModal
+          entry={customerWaiver}
+          settings={settings}
+          customerMode={true}
+          onClose={(result) => {
+            setCustomerWaiver(null);
+            setSearchName('');
+            if (result?.appSigned) onEntriesRefresh?.();
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -433,7 +515,7 @@ export default function SignUpTab({ onAddEntry, onDeleteEntry, settings, entries
     }
   }
 
-  if (!isOperator) return <PublicSignUpView settings={settings} />;
+  if (!isOperator) return <PublicSignUpView settings={settings} entries={entries} onEntriesRefresh={onEntriesRefresh} />;
 
   const err = (field) => errors[field]
     ? <div style={{ fontSize: 11, color: '#ff6b6b', marginTop: 3 }}>{errors[field]}</div>
@@ -825,11 +907,11 @@ export default function SignUpTab({ onAddEntry, onDeleteEntry, settings, entries
           </div>
         </div>
       )}
-      {/* ── Fees Needed (signed but not paid — fee entry pending) ── */}
+      {/* ── Fees Needed (signed but unpaid, or customer-entered fee needing verification) ── */}
       {(() => {
         const recentIds  = new Set(recent.map(r => r.id));
         const feesNeeded = entries
-          .filter(e => e.appSigned === 1 && !(e.paid === 1 || e.paid === '1') && !recentIds.has(e.id))
+          .filter(e => e.appSigned === 1 && (!(e.paid === 1 || e.paid === '1') || e.feeVerified === 0) && !recentIds.has(e.id))
           .sort((a, b) => (b.signedUpAt ?? '').localeCompare(a.signedUpAt ?? ''));
         if (!feesNeeded.length) return null;
         return (
@@ -838,38 +920,46 @@ export default function SignUpTab({ onAddEntry, onDeleteEntry, settings, entries
               ⚠ Fees Needed ({feesNeeded.length})
             </h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {feesNeeded.map(r => (
-                <div key={r.id} style={{
-                  display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                  background: 'rgba(240,173,78,0.07)', borderRadius: 8,
-                  border: '1px solid rgba(240,173,78,0.35)',
-                  padding: '8px 12px', fontSize: 13,
-                }}>
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    <span style={{ fontWeight: 700, color: 'var(--white)' }}>
-                      {[r.boaterFirst, r.boaterLast, r.boaterSuffix].filter(Boolean).join(' ')}
-                    </span>
-                    {(r.coAnglerFirst || r.coAnglerLast) && (
-                      <span style={{ color: 'var(--header-bg)', fontSize: 12 }}>
-                        / {[r.coAnglerFirst, r.coAnglerLast, r.coAnglerSuffix].filter(Boolean).join(' ')}
+              {feesNeeded.map(r => {
+                const needsVerify = r.feeVerified === 0;
+                return (
+                  <div key={r.id} style={{
+                    display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                    background: 'rgba(240,173,78,0.07)', borderRadius: 8,
+                    border: '1px solid rgba(240,173,78,0.35)',
+                    padding: '8px 12px', fontSize: 13,
+                  }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      <span style={{ fontWeight: 700, color: 'var(--white)' }}>
+                        {[r.boaterFirst, r.boaterLast, r.boaterSuffix].filter(Boolean).join(' ')}
                       </span>
-                    )}
+                      {(r.coAnglerFirst || r.coAnglerLast) && (
+                        <span style={{ color: 'var(--header-bg)', fontSize: 12 }}>
+                          / {[r.coAnglerFirst, r.coAnglerLast, r.coAnglerSuffix].filter(Boolean).join(' ')}
+                        </span>
+                      )}
+                      {needsVerify && r.buyIn > 0 && (
+                        <span style={{ fontSize: 11, color: '#f0ad4e' }}>
+                          Customer entered: ${parseFloat(r.buyIn).toFixed(2)} — verify &amp; confirm
+                        </span>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      disabled={openingWaiver === r.id}
+                      onClick={() => openSignApplication(r)}
+                      style={{
+                        padding: '4px 12px', fontSize: 11, cursor: openingWaiver === r.id ? 'not-allowed' : 'pointer',
+                        background: needsVerify ? '#7b5c00' : '#c67c00', color: '#fff', border: 'none',
+                        borderRadius: 5, fontWeight: 600, whiteSpace: 'nowrap', marginLeft: 8,
+                        opacity: openingWaiver === r.id ? 0.6 : 1,
+                      }}
+                    >
+                      {openingWaiver === r.id ? 'Loading…' : needsVerify ? 'Verify Fee' : 'Enter Fee'}
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    disabled={openingWaiver === r.id}
-                    onClick={() => openSignApplication(r)}
-                    style={{
-                      padding: '4px 12px', fontSize: 11, cursor: openingWaiver === r.id ? 'not-allowed' : 'pointer',
-                      background: '#c67c00', color: '#fff', border: 'none',
-                      borderRadius: 5, fontWeight: 600, whiteSpace: 'nowrap', marginLeft: 8,
-                      opacity: openingWaiver === r.id ? 0.6 : 1,
-                    }}
-                  >
-                    {openingWaiver === r.id ? 'Loading…' : 'Enter Fee'}
-                  </button>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         );

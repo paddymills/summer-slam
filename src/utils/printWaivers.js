@@ -352,6 +352,171 @@ export function printAllWaivers(signedEntries, contacts, settings) {
   });
 }
 
+// Generate and share/download a PDF of a signed waiver with embedded signature images
+export async function shareSignedWaiver(entry, boaterSigUrl, coaSigUrl, settings) {
+  const year      = new Date().getFullYear();
+  const entryFee  = parseFloat(settings?.fees?.entryFee)  || 250;
+  const lunkerFee = parseFloat(settings?.fees?.lunkerFee) || 10;
+  const optFee    = parseFloat(settings?.fees?.optFee)    || 20;
+  const tDate     = settings?.tournamentDate
+    ? new Date(settings.tournamentDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+    : '';
+  const header = [tDate, settings?.tournamentLocation].filter(Boolean).join(' · ');
+  const stripTags = s => s.replace(/<[^>]+>/g, '');
+
+  const boaterName = [entry.boaterFirst, entry.boaterLast, entry.boaterSuffix].filter(Boolean).join(' ');
+  const coaName    = [entry.coAnglerFirst, entry.coAnglerLast, entry.coAnglerSuffix].filter(Boolean).join(' ');
+  const hasCoAngler = !!(entry.coAnglerFirst && entry.coAnglerLast);
+  const buyAmt     = parseFloat(entry.buyIn || 0).toFixed(2);
+  const paidLabel  = Number(entry.paid) ? 'Paid in Full' : 'Partial';
+
+  const doc = new jsPDF({ unit: 'mm', format: 'letter' });
+  const PW = 215.9, M = 15, CW = PW - 2 * M;
+  const lh = pt => pt * 1.15 * 25.4 / 72;
+  let y = M;
+  const sf = (style, pt) => { doc.setFont('helvetica', style); doc.setFontSize(pt); };
+  const hr = (w = 0.5) => { doc.setLineWidth(w); doc.setDrawColor(30,30,30); doc.line(M, y, PW-M, y); y += 3; };
+  const underline = (x1, x2, yy) => { doc.setLineWidth(0.3); doc.setDrawColor(120,120,120); doc.line(x1, yy+0.5, x2, yy+0.5); };
+  const sectionLabel = text => { sf('bold', 7); doc.setTextColor(60,60,60); doc.text(text.toUpperCase(), M, y); y += 4; doc.setTextColor(20,20,20); };
+
+  // Title
+  sf('bold', 14); doc.setTextColor(20,20,20);
+  doc.text(`${year} SUMMER SLAM ENTRY FORM`, PW/2, y, { align: 'center' }); y += 5;
+  if (header) { sf('normal', 9); doc.setTextColor(80,80,80); doc.text(header, PW/2, y, { align: 'center' }); y += 4; doc.setTextColor(20,20,20); }
+  y += 1; hr(0.8); y += 1;
+
+  // Entry Fees (filled)
+  sectionLabel('Entry Fees');
+  sf('bold', 8.5);
+  let x = M;
+  doc.text(`Buy In: $${buyAmt} — ${paidLabel}`, x, y);
+  const feeParts = [entry.lunker && `Lunker ($${lunkerFee})`, entry.option && `Option ($${optFee})`].filter(Boolean);
+  if (feeParts.length) {
+    x = M + doc.getTextWidth(`Buy In: $${buyAmt} — ${paidLabel}`) + 5;
+    sf('normal', 8.5); doc.text(feeParts.join('  ·  '), x, y);
+  }
+  y += 6;
+
+  // Order numbers (if any)
+  const boaterOrderNo   = entry.boaterOrderNo   || '';
+  const coAnglerOrderNo = entry.coAnglerOrderNo || '';
+  if (boaterOrderNo || coAnglerOrderNo) {
+    sf('normal', 8.5); x = M;
+    const bLabelW = doc.getTextWidth('Boater Order #:');
+    const cLabelW = doc.getTextWidth('Co-Angler Order #:');
+    const blankW  = (CW - bLabelW - cLabelW - 14) / 2;
+    doc.text('Boater Order #:', x, y); x += bLabelW + 2;
+    underline(x, x + blankW, y);
+    if (boaterOrderNo) { sf('bold', 8.5); doc.text(boaterOrderNo, x+1, y, { maxWidth: blankW-2 }); sf('normal', 8.5); }
+    x += blankW + 10;
+    doc.text('Co-Angler Order #:', x, y); x += cLabelW + 2;
+    underline(x, PW-M, y);
+    if (coAnglerOrderNo) { sf('bold', 8.5); doc.text(coAnglerOrderNo, x+1, y, { maxWidth: PW-M-x-2 }); sf('normal', 8.5); }
+    y += 7;
+  }
+
+  // Anglers
+  sectionLabel('Anglers');
+  const drawAnglerRow = (label, name, phone, email) => {
+    sf('bold', 8); doc.text(label, M, y);
+    sf('normal', 8);
+    let rx = M + 20;
+    doc.text('Name:', rx, y); rx += doc.getTextWidth('Name:') + 1;
+    underline(rx, rx+50, y);
+    if (name) { sf('bold', 8); doc.text(name, rx+1, y, { maxWidth: 49 }); sf('normal', 8); }
+    rx += 52;
+    doc.text('Phone:', rx, y); rx += doc.getTextWidth('Phone:') + 1;
+    underline(rx, rx+32, y);
+    if (phone) { sf('bold', 8); doc.text(phone, rx+1, y); sf('normal', 8); }
+    rx += 34; sf('normal', 7.5);
+    doc.text('Email:', rx, y); rx += doc.getTextWidth('Email:') + 1;
+    underline(rx, PW-M, y);
+    if (email) { sf('bold', 7.5); doc.text(email, rx+1, y, { maxWidth: PW-M-rx-2 }); sf('normal', 7.5); }
+    y += 5.5;
+  };
+  drawAnglerRow('Boater', boaterName, entry.boaterPhone, entry.boaterEmail);
+  if (hasCoAngler) drawAnglerRow('Co-Angler', coaName, entry.coAnglerPhone, entry.coAnglerEmail);
+  y += 1; hr(0.8); y += 2;
+
+  // Legal clauses
+  sectionLabel('Participant Agreement, Release and Acknowledgment of Risk');
+  sf('normal', 8); doc.setTextColor(30,30,30);
+  const lineH = lh(8);
+  for (const clause of LEGAL_CLAUSES) {
+    const lines = doc.splitTextToSize(stripTags(clause), CW);
+    doc.text(lines, M, y);
+    y += lines.length * lineH + 2;
+  }
+  y += 2;
+
+  // Waiver banner
+  sf('bold', 7.5); doc.setTextColor(20,20,20);
+  const bannerText  = `THIS SIGNED WAIVER IS IN EFFECT FOR ANY SUSQUEHANNA FISHING TACKLE, INC. TOURNAMENT IN ${year}`;
+  const bannerLines = doc.splitTextToSize(bannerText, CW-6);
+  const bannerH     = bannerLines.length * lh(7.5) + 5;
+  doc.setDrawColor(20,20,20); doc.setLineWidth(0.7);
+  doc.rect(M, y, CW, bannerH);
+  doc.text(bannerLines, PW/2, y + bannerH/2 + 1, { align: 'center' });
+  y += bannerH + 5;
+
+  // Signature blocks with embedded images
+  const sigW = (CW - 8) / 2, sigH = 22;
+  const sigDate = ts => ts ? new Date(ts).toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: '2-digit', hour: 'numeric', minute: '2-digit' }) : null;
+  [[boaterSigUrl, 'Boater', 1], [coaSigUrl, 'Co-Angler', 2]].forEach(([sigUrl, label, num], i) => {
+    if (num === 2 && !hasCoAngler) return;
+    const sx = M + i * (sigW + 8);
+    sf('bold', 8); doc.setTextColor(20,20,20);
+    doc.text(`#${num} ${label} Signature`, sx, y);
+    sf('normal', 7); doc.setTextColor(100,100,100);
+    doc.text(`(Good through 12/31/${year})`, sx, y + 3.5);
+    doc.setFillColor(250,250,250); doc.setDrawColor(150,150,150); doc.setLineWidth(0.4);
+    doc.rect(sx, y+7, sigW, sigH, 'FD');
+    if (sigUrl) {
+      try { doc.addImage(sigUrl, 'JPEG', sx+1, y+7.5, sigW-2, sigH-1); } catch (_) {}
+    } else {
+      sf('normal', 8); doc.setTextColor(160,160,160);
+      doc.text('Signature not on file', sx + sigW/2, y+7+sigH/2, { align: 'center', baseline: 'middle' });
+    }
+    const dt = sigDate(null);
+    const dy = y + 7 + sigH + 5;
+    sf('normal', 7.5); doc.setTextColor(60,60,60);
+    doc.text('Signed: ' + new Date().toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: '2-digit' }), sx, dy);
+  });
+
+  // Share / download
+  const SUBMIT_EMAIL   = 'info@sfttackle.com';
+  const nameForFile    = [entry.boaterFirst, entry.boaterLast].filter(Boolean).join(' ');
+  const subjectLine    = `${year} Summer Slam Signed Application — ${nameForFile}`;
+  const fileName       = `${year}_Summer_Slam_Signed_${nameForFile.replace(/\s+/g,'_')}.pdf`;
+  const pdfBlob        = doc.output('blob');
+  const pdfFile        = new File([pdfBlob], fileName, { type: 'application/pdf' });
+
+  const fallbackShare = () => {
+    const url = URL.createObjectURL(pdfBlob);
+    const a   = document.createElement('a');
+    a.href = url; a.download = fileName;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    const body = `Please find the attached signed entry form.\n\n(Attach the downloaded PDF: ${fileName})`;
+    window.open(`mailto:${SUBMIT_EMAIL}?subject=${encodeURIComponent(subjectLine)}&body=${encodeURIComponent(body)}`);
+  };
+
+  if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+    try {
+      await navigator.share({
+        title: subjectLine,
+        text: `Your signed Summer Slam entry form. A copy has been sent to ${SUBMIT_EMAIL}.`,
+        files: [pdfFile],
+      });
+    } catch (e) {
+      if (e.name !== 'AbortError') fallbackShare();
+    }
+  } else {
+    fallbackShare();
+  }
+}
+
 export async function shareBlankApplication(settings, formData = null) {
 
   const year      = new Date().getFullYear();

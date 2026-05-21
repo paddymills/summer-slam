@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
-import { updateEntry, saveContactWaiver, lookupContactId } from '../utils/api';
-import { printSingleWaiver, waiverHTMLTemplate } from '../utils/printWaivers';
+import { updateEntry, saveContactWaiver, lookupContactId, signEntryAsCustomer } from '../utils/api';
+import { printSingleWaiver, waiverHTMLTemplate, shareSignedWaiver } from '../utils/printWaivers';
 import { formatPhone } from '../utils/phone';
 
 const OVERLAY = {
@@ -154,7 +154,7 @@ function ReadOnlySigBlock({ sig, label, number }) {
   );
 }
 
-export default function WaiverModal({ entry, boaterContactId, coAnglerContactId, prefillSigs = null, settings, onClose }) {
+export default function WaiverModal({ entry, boaterContactId, coAnglerContactId, prefillSigs = null, settings, onClose, customerMode = false }) {
   const year        = new Date().getFullYear();
   const entryFee    = parseFloat(settings?.fees?.entryFee) || 250;
   const lunkerFee   = parseFloat(settings?.fees?.lunkerFee) || 10;
@@ -174,8 +174,8 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
 
   const hasCoAngler = !!(entry.coAnglerFirst && entry.coAnglerLast);
 
-  // Operator PIN unlock
-  const [unlocked,    setUnlocked]    = useState(false);
+  // Operator PIN unlock — customer mode starts unlocked (no PIN needed)
+  const [unlocked,    setUnlocked]    = useState(customerMode);
   const [pinInput,    setPinInput]    = useState('');
   const [pinError,    setPinError]    = useState('');
   const [showPinInput, setShowPinInput] = useState(false);
@@ -285,6 +285,37 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
     }
   }
 
+  async function handleCustomerSubmit() {
+    const amount = parseFloat(buyInAmount) || 0;
+    const effectiveBoaterPhone   = entry.boaterPhone?.trim()   || formatPhone(boaterPhone.trim());
+    const effectiveCoAnglerPhone = entry.coAnglerPhone?.trim() || formatPhone(coAnglerPhone.trim());
+    if (!effectiveBoaterPhone) { setError('Boater phone number is required — enter it in the Anglers section above.'); return; }
+    if (hasCoAngler && !effectiveCoAnglerPhone) { setError('Co-angler phone number is required — enter it in the Anglers section above.'); return; }
+    if (!boaterSigned) { setError('Boater signature is required.'); return; }
+    if (hasCoAngler && !coAnglerSigned) { setError('Co-angler signature is required.'); return; }
+
+    setSubmitting(true);
+    setError('');
+    try {
+      await signEntryAsCustomer(entry.id, {
+        buyIn:          amount,
+        lunker:         lunkerChecked ? 1 : 0,
+        option:         optionChecked ? 1 : 0,
+        boaterPhone:    effectiveBoaterPhone,
+        coAnglerPhone:  effectiveCoAnglerPhone,
+      });
+      const boaterSigUrl = captureSig(boaterCanvasRef.current);
+      const coaSigUrl    = hasCoAngler ? captureSig(coAnglerCanvasRef.current) : null;
+      const result = { appSigned: 1, buyIn: amount, lunker: lunkerChecked ? 1 : 0, option: optionChecked ? 1 : 0, paid: 0, feeVerified: 0 };
+      setSubmittedSigs({ boater: boaterSigUrl, coAngler: coaSigUrl, result, customerMode: true });
+      setSubmitted(true);
+    } catch (e) {
+      setError(e.message || 'Failed to save. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
   async function handleSubmit(pinVerified = false) {
     if (!unlocked && !pinVerified) { setError('Operator must enter their PIN to unlock and record fees before submitting.'); return; }
     const amount = usesSplitFeeUI
@@ -370,9 +401,45 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
         )}
         <hr style={DIVIDER} />
 
-        {/* ── Entry Fees (operator-locked) ── */}
+        {/* ── Entry Fees ── */}
         <p style={SECTION_HEAD}>Entry Fees</p>
-        {!unlocked && !feePreFilled ? (
+        {customerMode ? (
+          /* ── Customer self-sign: fee is self-reported, staff verifies later ── */
+          <div style={{ border: '1.5px solid #1a5276', borderRadius: 8, padding: '14px 16px', marginBottom: 20, background: '#eaf3fb' }}>
+            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+              <div style={{ flex: '1 1 180px' }}>
+                <label style={{ display: 'block', fontSize: 12, fontWeight: 700, marginBottom: 4, color: '#333' }}>
+                  Buy In — Amount You're Paying ($)
+                  <span style={{ fontWeight: 400, color: '#666', marginLeft: 6, fontSize: 11 }}>Staff will verify</span>
+                </label>
+                <input
+                  type="number"
+                  inputMode="decimal"
+                  value={buyInAmount}
+                  placeholder="e.g. 250"
+                  min="0"
+                  step="0.01"
+                  onChange={e => setBuyInAmount(e.target.value)}
+                  style={{ width: '100%', padding: '8px 10px', fontSize: 16, borderRadius: 6, border: '1.5px solid #aaa', boxSizing: 'border-box' }}
+                  autoFocus
+                />
+              </div>
+              <div style={{ display: 'flex', gap: 16, paddingBottom: 4 }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, fontWeight: 600, cursor: 'pointer', userSelect: 'none' }}>
+                  <input type="checkbox" checked={lunkerChecked} onChange={e => setLunkerChecked(e.target.checked)} style={{ width: 18, height: 18, cursor: 'pointer' }} />
+                  Lunker (${lunkerFee})
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, fontWeight: 600, cursor: 'pointer', userSelect: 'none' }}>
+                  <input type="checkbox" checked={optionChecked} onChange={e => setOptionChecked(e.target.checked)} style={{ width: 18, height: 18, cursor: 'pointer' }} />
+                  Option (${optFee})
+                </label>
+              </div>
+            </div>
+            <p style={{ fontSize: 11, color: '#1a5276', marginTop: 8, marginBottom: 0 }}>
+              Your self-reported fee will be verified by tournament staff before your entry is confirmed as paid.
+            </p>
+          </div>
+        ) : !unlocked && !feePreFilled ? (
           <div style={{ marginBottom: 20 }}>
             {!showPinInput ? (
               <button
@@ -644,9 +711,11 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
             <div style={{ background: '#e8f5e9', border: '2px solid #2e7d32', borderRadius: 8, padding: '12px 16px', marginBottom: submittedSigs?.feePending ? 8 : 16, textAlign: 'center', color: '#1b5e20', fontWeight: 700, fontSize: 15 }}>
               ✓ Application submitted for {boaterName}
             </div>
-            {submittedSigs?.feePending && (
+            {(submittedSigs?.feePending || submittedSigs?.customerMode) && (
               <div style={{ background: 'rgba(240,173,78,0.12)', border: '1.5px solid rgba(240,173,78,0.5)', borderRadius: 8, padding: '10px 14px', marginBottom: 16, textAlign: 'center', color: '#f0ad4e', fontSize: 13 }}>
-                ⚠ Fee entry is pending — an operator will complete this before the tournament.
+                {submittedSigs?.customerMode
+                  ? '⚠ Your self-reported fee will be verified by tournament staff before your entry is confirmed as paid.'
+                  : '⚠ Fee entry is pending — an operator will complete this before the tournament.'}
               </div>
             )}
           </>
@@ -659,7 +728,7 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
 
         {/* ── Actions ── */}
         {submitted ? (
-          <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
+          <div style={{ display: 'flex', gap: 10, marginTop: 8, flexWrap: 'wrap' }}>
             <button
               type="button"
               onClick={() => printSingleWaiver(
@@ -667,18 +736,40 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
                 submittedSigs.boater, submittedSigs.coAngler, settings
               )}
               style={{
-                flex: '0 0 auto', padding: '13px 22px', borderRadius: 8,
+                flex: '0 0 auto', padding: '13px 18px', borderRadius: 8,
                 border: '1.5px solid #1a5276', background: '#eaf3fb',
                 fontSize: 15, cursor: 'pointer', color: '#1a5276', fontWeight: 600,
               }}
             >
               🖨 Print
             </button>
+            {submittedSigs?.customerMode && (
+              <button
+                type="button"
+                onClick={async () => {
+                  try {
+                    await shareSignedWaiver(
+                      { ...entry, ...submittedSigs.result },
+                      submittedSigs.boater, submittedSigs.coAngler, settings
+                    );
+                  } catch (err) {
+                    if (err?.name !== 'AbortError') alert('Could not share PDF: ' + err?.message);
+                  }
+                }}
+                style={{
+                  flex: '0 0 auto', padding: '13px 18px', borderRadius: 8,
+                  border: '1.5px solid #555', background: '#f5f5f5',
+                  fontSize: 15, cursor: 'pointer', color: '#333', fontWeight: 600,
+                }}
+              >
+                📤 Save / Email PDF
+              </button>
+            )}
             <button
               type="button"
               onClick={() => onClose(submittedSigs?.result)}
               style={{
-                flex: 1, padding: '13px 0', borderRadius: 8,
+                flex: 1, minWidth: 80, padding: '13px 0', borderRadius: 8,
                 border: 'none', background: '#2e7d32',
                 fontSize: 15, fontWeight: 700, cursor: 'pointer', color: '#fff',
               }}
@@ -688,7 +779,36 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
           </div>
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
-            {feePreFilled && !unlocked && (
+            {customerMode ? (
+              <div style={{ display: 'flex', gap: 12 }}>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  style={{
+                    flex: '0 0 auto', padding: '13px 22px', borderRadius: 8,
+                    border: '1.5px solid #bbb', background: '#eee',
+                    fontSize: 15, cursor: 'pointer', color: '#444',
+                  }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCustomerSubmit}
+                  disabled={submitting}
+                  style={{
+                    flex: 1, padding: '13px 0', borderRadius: 8,
+                    border: 'none', background: '#1a5276',
+                    fontSize: 15, fontWeight: 700,
+                    cursor: submitting ? 'not-allowed' : 'pointer',
+                    color: '#fff', opacity: submitting ? 0.5 : 1,
+                  }}
+                >
+                  {submitting ? 'Saving…' : '✓ Submit Application'}
+                </button>
+              </div>
+            ) : null}
+            {!customerMode && feePreFilled && !unlocked && (
               <div>
                 {!showPinInput ? (
                   <button
@@ -728,53 +848,62 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
                 {pinError && <p style={{ color: '#c00', fontSize: 12, margin: '6px 0 0' }}>{pinError}</p>}
               </div>
             )}
-            <div style={{ display: 'flex', gap: 12 }}>
-              <button
-                type="button"
-                onClick={onClose}
-                style={{
-                  flex: '0 0 auto', padding: '13px 22px', borderRadius: 8,
-                  border: '1.5px solid #bbb', background: '#eee',
-                  fontSize: 15, cursor: 'pointer', color: '#444',
-                }}
-              >
-                Cancel
-              </button>
-              {unlocked && (
-                <button
-                  type="button"
-                  onClick={handleSubmit}
-                  disabled={submitting}
-                  style={{
-                    flex: 1, padding: '13px 0', borderRadius: 8,
-                    border: 'none', background: '#1a5276',
-                    fontSize: 15, fontWeight: 700,
-                    cursor: submitting ? 'not-allowed' : 'pointer',
-                    color: '#fff', opacity: submitting ? 0.5 : 1,
-                  }}
-                >
-                  {submitting ? 'Saving…' : '✓ Submit Application'}
-                </button>
-              )}
-            </div>
-            {!unlocked && (
-              <button
-                type="button"
-                onClick={handleSignFeePending}
-                disabled={submitting}
-                style={{
-                  width: '100%', padding: '11px 0', borderRadius: 8,
-                  border: '1.5px solid rgba(240,173,78,0.5)', background: 'rgba(240,173,78,0.08)',
-                  fontSize: 14, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer',
-                  color: '#f0ad4e',
-                }}
-              >
-                ✓ Sign Application — Fee Pending (Operator will complete)
-              </button>
+            {!customerMode && (
+              <>
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    style={{
+                      flex: '0 0 auto', padding: '13px 22px', borderRadius: 8,
+                      border: '1.5px solid #bbb', background: '#eee',
+                      fontSize: 15, cursor: 'pointer', color: '#444',
+                    }}
+                  >
+                    Cancel
+                  </button>
+                  {unlocked && (
+                    <button
+                      type="button"
+                      onClick={handleSubmit}
+                      disabled={submitting}
+                      style={{
+                        flex: 1, padding: '13px 0', borderRadius: 8,
+                        border: 'none', background: '#1a5276',
+                        fontSize: 15, fontWeight: 700,
+                        cursor: submitting ? 'not-allowed' : 'pointer',
+                        color: '#fff', opacity: submitting ? 0.5 : 1,
+                      }}
+                    >
+                      {submitting ? 'Saving…' : '✓ Submit Application'}
+                    </button>
+                  )}
+                </div>
+                {!unlocked && (
+                  <button
+                    type="button"
+                    onClick={handleSignFeePending}
+                    disabled={submitting}
+                    style={{
+                      width: '100%', padding: '11px 0', borderRadius: 8,
+                      border: '1.5px solid rgba(240,173,78,0.5)', background: 'rgba(240,173,78,0.08)',
+                      fontSize: 14, fontWeight: 600, cursor: submitting ? 'not-allowed' : 'pointer',
+                      color: '#f0ad4e',
+                    }}
+                  >
+                    ✓ Sign Application — Fee Pending (Operator will complete)
+                  </button>
+                )}
+              </>
             )}
           </div>
         )}
-        {!submitted && (
+        {!submitted && customerMode && (
+          <p style={{ fontSize: 11, color: '#888', textAlign: 'center', marginTop: 10 }}>
+            Your fee is self-reported and will be verified by tournament staff.
+          </p>
+        )}
+        {!submitted && !customerMode && (
           <p style={{ fontSize: 11, color: '#888', textAlign: 'center', marginTop: 10 }}>
             Submitting records fees, marks app signed, and saves signatures to the angler contacts.
           </p>

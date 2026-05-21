@@ -57,6 +57,7 @@ function parseEntry(raw) {
     appSignedAt:     raw.app_signed_at     ?? raw.appSignedAt     ?? null,
     boaterOrderNo:   raw.boater_order_no   ?? raw.boaterOrderNo   ?? '',
     coAnglerOrderNo: raw.co_angler_order_no ?? raw.coAnglerOrderNo ?? '',
+    feeVerified:     raw.fee_verified       ?? raw.feeVerified     ?? null,
   };
 }
 
@@ -222,6 +223,16 @@ export async function deleteContact(id) {
     headers: authHeaders(),
   });
   if (!res.ok) throw new Error('Failed to delete contact');
+}
+
+export async function signEntryAsCustomer(id, { buyIn, lunker, option, boaterPhone, coAnglerPhone }) {
+  const res = await fetchWithTimeout(`${BASE}/entries/${id}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ customerSign: true, buyIn, lunker, option, boaterPhone, coAnglerPhone }),
+  });
+  if (res.status === 409) throw new Error('This application has already been signed.');
+  if (!res.ok) throw new Error('Failed to save application. Please try again.');
 }
 
 export async function saveContactWaiver(id, { signature, signedAt, waiverYear, waiverSnapshot, waiverHtml }) {

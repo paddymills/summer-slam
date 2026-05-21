@@ -42,6 +42,7 @@ function toJS(row, hidePI = false) {
     appSignedAt:      row.app_signed_at      ?? null,
     boaterOrderNo:    row.boater_order_no    ?? '',
     coAnglerOrderNo:  row.co_angler_order_no ?? '',
+    feeVerified:      row.fee_verified       ?? null,
   };
 }
 
@@ -71,6 +72,7 @@ export async function onRequestPost({ request, env }) {
   if (!checkOperatorAuth(request, env)) return Response.json({ error: 'Unauthorized' }, { status: 401 });
   try {
     const db   = getDb(env);
+    try { await db.execute("ALTER TABLE entries ADD COLUMN fee_verified INTEGER"); } catch (_) {}
     const body = await request.json();
     const t    = v => (v ?? '').trim();
 

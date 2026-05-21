@@ -42,6 +42,7 @@ function toJS(row) {
     appSignedAt:      row.app_signed_at      ?? null,
     boaterOrderNo:    row.boater_order_no    ?? '',
     coAnglerOrderNo:  row.co_angler_order_no ?? '',
+    feeVerified:      row.fee_verified       ?? null,
   };
 }
 
@@ -50,6 +51,7 @@ export async function onRequestPut({ params, request, env }) {
   if (!/^\d+$/.test(params.id)) return Response.json({ error: 'Invalid id' }, { status: 400 });
   try {
     const db   = getDb(env);
+    try { await db.execute("ALTER TABLE entries ADD COLUMN fee_verified INTEGER"); } catch (_) {}
     const body = await request.json();
     const t    = v => (v ?? '').trim();
 
@@ -70,6 +72,7 @@ export async function onRequestPut({ params, request, env }) {
               lunker=?, option_field=?, paid=?, app_signed=?, buy_in=?,
               raw_weight=?, dead_fish=?, short_fish=?, needs_attention=?,
               boater_order_no=?, co_angler_order_no=?,
+              fee_verified  = CASE WHEN ? IS NOT NULL THEN ? ELSE fee_verified END,
               signed_up_at  = CASE WHEN signed_up_at IS NULL AND ? != '' THEN CURRENT_TIMESTAMP ELSE signed_up_at END,
               weighed_at   = CASE WHEN ? > 0 AND ? = 0 THEN COALESCE(?, CURRENT_TIMESTAMP) ELSE weighed_at END,
               checked_in_at = CASE WHEN ? = 1 AND checked_in_at IS NULL THEN CURRENT_TIMESTAMP ELSE checked_in_at END,
@@ -95,6 +98,8 @@ export async function onRequestPut({ params, request, env }) {
         body.needsAttention ? 1 : 0,
         t(body.boaterOrderNo   ?? ''),
         t(body.coAnglerOrderNo ?? ''),
+        body.feeVerified != null ? Number(body.feeVerified) : null,
+        body.feeVerified != null ? Number(body.feeVerified) : null,
         t(body.boaterFirst),
         newTotalWeight, preserveWeighTime, clientWeighedAt,
         body.markCheckedIn ? 1 : 0,
@@ -173,6 +178,51 @@ export async function onRequestPut({ params, request, env }) {
     } catch (_) {}
 
     return Response.json(toJS(after));
+  } catch (e) {
+    return Response.json({ error: e.message }, { status: 500 });
+  }
+}
+
+// No auth required — angler self-signs. Only works on unsigned entries; fee is flagged for operator verification.
+export async function onRequestPatch({ params, request, env }) {
+  if (!/^\d+$/.test(params.id)) return Response.json({ error: 'Invalid id' }, { status: 400 });
+  try {
+    const db   = getDb(env);
+    try { await db.execute("ALTER TABLE entries ADD COLUMN fee_verified INTEGER"); } catch (_) {}
+    const body = await request.json();
+    if (!body.customerSign) return Response.json({ error: 'Missing customerSign flag' }, { status: 400 });
+
+    // Guard: only unsigned entries can be customer-signed
+    const check = await db.execute({ sql: 'SELECT app_signed FROM entries WHERE id=?', args: [params.id] });
+    if (!check.rows[0]) return Response.json({ error: 'Not found' }, { status: 404 });
+    if (Number(check.rows[0].app_signed) === 1) return Response.json({ error: 'Already signed' }, { status: 409 });
+
+    await db.execute({
+      sql: `UPDATE entries SET
+              app_signed=1, fee_verified=0, buy_in=?, lunker=?, option_field=?, paid=0,
+              app_signed_at=CURRENT_TIMESTAMP, updated_at=CURRENT_TIMESTAMP,
+              boater_phone   = CASE WHEN (boater_phone   IS NULL OR boater_phone   = '') AND ? != '' THEN ? ELSE boater_phone   END,
+              co_angler_phone= CASE WHEN (co_angler_phone IS NULL OR co_angler_phone= '') AND ? != '' THEN ? ELSE co_angler_phone END
+            WHERE id=?`,
+      args: [
+        Number(body.buyIn) || 0,
+        Number(body.lunker) || 0,
+        Number(body.option) || 0,
+        body.boaterPhone ?? '', body.boaterPhone ?? '',
+        body.coAnglerPhone ?? '', body.coAnglerPhone ?? '',
+        params.id,
+      ],
+    });
+
+    // Log the sign event
+    try {
+      await db.execute('CREATE TABLE IF NOT EXISTS event_log (id INTEGER PRIMARY KEY AUTOINCREMENT, event_type TEXT NOT NULL, entry_id INTEGER, boat_no TEXT, boater_name TEXT, value TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)');
+      const entry = (await db.execute({ sql: 'SELECT boater_first, boater_last, boater_suffix, boat_no FROM entries WHERE id=?', args: [params.id] })).rows[0];
+      const name  = [entry?.boater_first, entry?.boater_last, entry?.boater_suffix].filter(Boolean).join(' ');
+      await db.execute({ sql: 'INSERT INTO event_log (event_type, entry_id, boat_no, boater_name, value) VALUES (?,?,?,?,?)', args: ['signed', params.id, entry?.boat_no ?? '', name, 'customer-signed'] });
+    } catch (_) {}
+
+    return Response.json({ ok: true });
   } catch (e) {
     return Response.json({ error: e.message }, { status: 500 });
   }

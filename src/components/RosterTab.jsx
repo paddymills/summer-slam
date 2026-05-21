@@ -388,15 +388,25 @@ export default function RosterTab({
         cell: ({ row: { original: r } }) => {
           const signed = r.appSigned === 1 || r.appSigned === '1';
           if (!signed) return <span className="cell-red">NO</span>;
+          const needsFeeVerify = r.feeVerified === 0;
           const ts = r.appSignedAt;
-          if (!ts) return <span className="cell-green">✓ Signed</span>;
-          const d = new Date(ts.includes('T') ? ts : ts.replace(' ', 'T') + (ts.includes('Z') ? '' : 'Z'));
-          return (
-            <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.2 }}>
-              <span className="cell-green" style={{ fontSize: 12 }}>✓ Signed</span>
+          const timeSpan = ts ? (() => {
+            const d = new Date(ts.includes('T') ? ts : ts.replace(' ', 'T') + (ts.includes('Z') ? '' : 'Z'));
+            return (
               <span style={{ fontSize: 10, color: 'var(--header-bg)', whiteSpace: 'nowrap' }}>
                 {d.toLocaleDateString([], { month: '2-digit', day: '2-digit', year: '2-digit' })} {d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </span>
+            );
+          })() : null;
+          return (
+            <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.2 }}>
+              <span className="cell-green" style={{ fontSize: 12 }}>✓ Signed</span>
+              {needsFeeVerify && (
+                <span style={{ fontSize: 9, background: 'rgba(240,173,78,0.2)', color: '#f0ad4e', borderRadius: 3, padding: '1px 4px', fontWeight: 700, marginTop: 2, whiteSpace: 'nowrap' }}>
+                  $? Verify
+                </span>
+              )}
+              {timeSpan}
             </span>
           );
         },
