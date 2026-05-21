@@ -608,10 +608,14 @@ export default function RosterTab({
                       {parseFloat(row.buyIn) > 0 ? `$${parseFloat(row.buyIn).toFixed(2)}` : '—'}
                     </td>
                     <td style={{ textAlign: 'center' }} onClick={e => e.stopPropagation()}>
-                      {row.appSigned === 1 || row.appSigned === '1'
-                        ? <button className="btn btn-outline btn-sm" onClick={() => viewWaiverForEntry(row, settings, fetchContactsWithSignatures)}>App</button>
-                        : <span style={{ color: 'var(--header-bg)', fontSize: 12 }}>—</span>
-                      }
+                      {row.appSigned === 1 || row.appSigned === '1' ? (
+                        <>
+                          <button className="btn btn-outline btn-sm" onClick={() => viewWaiverForEntry(row, settings, fetchContactsWithSignatures)}>App</button>
+                          {row.appSignedAt && <div style={{ fontSize: 10, color: '#4CAF50', marginTop: 2, whiteSpace: 'nowrap' }}>✓ {fmtSignedUp(row.appSignedAt)}</div>}
+                        </>
+                      ) : (
+                        <button className="btn btn-outline btn-sm" onClick={() => onSignApp?.(row)} style={{ opacity: 0.75 }}>Sign</button>
+                      )}
                     </td>
                     <td style={{ textAlign: 'center' }} onClick={e => e.stopPropagation()}>
                       <button className="btn btn-outline btn-sm" onClick={() => onEdit?.(row)}>Edit</button>
@@ -750,6 +754,7 @@ export default function RosterTab({
                   {isOperator && (
                     <td style={{ textAlign: 'center' }} onClick={e => e.stopPropagation()}>
                       <button className="btn btn-outline btn-sm" onClick={() => viewWaiverForEntry(row, settings, fetchContactsWithSignatures)}>App</button>
+                      {row.appSignedAt && <div style={{ fontSize: 10, color: '#4CAF50', marginTop: 2, whiteSpace: 'nowrap' }}>✓ {fmtSignedUp(row.appSignedAt)}</div>}
                     </td>
                   )}
                 </tr>

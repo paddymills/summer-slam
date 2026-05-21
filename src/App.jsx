@@ -184,7 +184,8 @@ const saveSettingsMut   = useSaveSettings();
         && (entryData.coAnglerFirst || entryData.coAnglerLast)
         && coAnglerWasBlank;
       updateEntryMut.mutate({ id: prev.id, data: { ...entryData, ...(coAnglerPersonChanged ? { appSigned: 0 } : {}) } }, {
-        onSuccess: () => {
+        onSuccess: (updated) => {
+          if (coAnglerPersonChanged) handleOpenSignApp(updated);
           upsertContactsMut.mutate([
             { firstName: entryData.boaterFirst,   lastName: entryData.boaterLast,   suffix: entryData.boaterSuffix ?? '',   phone: entryData.boaterPhone,   email: entryData.boaterEmail,
               ...(prev.boaterFirst !== entryData.boaterFirst || prev.boaterLast !== entryData.boaterLast
@@ -288,6 +289,7 @@ const saveSettingsMut   = useSaveSettings();
     const shouldResetAppSigned = coAnglerPersonChanged;
     updateEntryMut.mutate({ id: entryId, data: { ...entry, ...updates, preserveWeighTime: true, ...(shouldResetAppSigned ? { appSigned: 0 } : {}) } }, {
       onSuccess: (updated) => {
+        if (shouldResetAppSigned) handleOpenSignApp(updated);
         upsertContactsMut.mutate([
           { firstName: updated.boaterFirst,   lastName: updated.boaterLast,   suffix: updated.boaterSuffix ?? '',   phone: updated.boaterPhone,   email: updated.boaterEmail,
             ...(entry.boaterFirst !== updated.boaterFirst || entry.boaterLast !== updated.boaterLast

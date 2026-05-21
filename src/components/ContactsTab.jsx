@@ -279,6 +279,8 @@ export default function ContactsTab({ isUnlocked, contacts, contactsLoading, onC
     else { setSortKey(key); setSortDir('asc'); }
   }
 
+  const currentYear = new Date().getFullYear();
+
   const displayed = contacts
     .filter(c => {
       if (!filter) return true;
@@ -287,10 +289,14 @@ export default function ContactsTab({ isUnlocked, contacts, contactsLoading, onC
     })
     .sort((a, b) => {
       let cmp;
-      if (sortKey === 'lastSeen') {
-        const av = a.lastSeen || '';
-        const bv = b.lastSeen || '';
+      if (sortKey === 'lastSeen' || sortKey === 'waiver') {
+        const av = sortKey === 'waiver' ? (a.signedAt || '') : (a.lastSeen || '');
+        const bv = sortKey === 'waiver' ? (b.signedAt || '') : (b.lastSeen || '');
         cmp = av < bv ? -1 : av > bv ? 1 : 0;
+      } else if (sortKey === 'phone') {
+        cmp = (a.phone || '').localeCompare(b.phone || '');
+      } else if (sortKey === 'email') {
+        cmp = (a.email || '').localeCompare(b.email || '');
       } else {
         const av = sortKey === 'firstName' ? a.firstName : a.lastName;
         const bv = sortKey === 'firstName' ? b.firstName : b.lastName;
@@ -441,9 +447,12 @@ export default function ContactsTab({ isUnlocked, contacts, contactsLoading, onC
           <thead>
             <tr>
               {[
-                { key: 'firstName', label: 'First Name', width: '18%' },
-                { key: 'lastName',  label: 'Last Name',  width: '16%' },
-                { key: 'lastSeen',  label: 'Last Seen',  width: '13%', className: 'col-last-seen' },
+                { key: 'firstName', label: 'First Name', width: '15%' },
+                { key: 'lastName',  label: 'Last Name',  width: '14%' },
+                { key: 'lastSeen',  label: 'Last Seen',  width: '12%', className: 'col-last-seen' },
+                { key: 'waiver',    label: 'Waiver',     width: '13%' },
+                { key: 'phone',     label: 'Phone',      width: '19%' },
+                { key: 'email',     label: 'Email',      width: '19%', className: 'col-email' },
               ].map(({ key, label, width, className }) => (
                 <th key={key} className={className} style={{ width, cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap' }}
                     onClick={() => toggleSort(key)}>
@@ -453,16 +462,14 @@ export default function ContactsTab({ isUnlocked, contacts, contactsLoading, onC
                   </span>
                 </th>
               ))}
-              <th style={{ width: '22%' }}>Phone</th>
-              <th className="col-email" style={{ width: '22%' }}>Email</th>
               {isUnlocked && <th style={{ width: 90, textAlign: 'center' }}>Actions</th>}
             </tr>
           </thead>
           <tbody>
             {contactsLoading ? (
-              <tr><td colSpan={isUnlocked ? 6 : 5} style={{ textAlign: 'center', color: 'var(--header-bg)', padding: 40 }}>Loading…</td></tr>
+              <tr><td colSpan={isUnlocked ? 7 : 6} style={{ textAlign: 'center', color: 'var(--header-bg)', padding: 40 }}>Loading…</td></tr>
             ) : displayed.length === 0 ? (
-              <tr><td colSpan={isUnlocked ? 6 : 5} style={{ textAlign: 'center', color: 'var(--header-bg)', padding: 40 }}>
+              <tr><td colSpan={isUnlocked ? 7 : 6} style={{ textAlign: 'center', color: 'var(--header-bg)', padding: 40 }}>
                 {filter ? 'No contacts match your filter.' : 'No contacts yet — they are saved automatically when signing up anglers.'}
               </td></tr>
             ) : displayed.map(c => (
@@ -473,6 +480,15 @@ export default function ContactsTab({ isUnlocked, contacts, contactsLoading, onC
                 </td>
                 <td className="col-last-seen" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12, color: 'var(--header-bg)' }}>
                   {formatLastSeen(c.lastSeen)}
+                </td>
+                <td style={{ whiteSpace: 'nowrap' }}>
+                  {c.waiverYear
+                    ? <span style={{ color: c.waiverYear >= currentYear ? '#4CAF50' : 'var(--header-bg)', fontSize: 12, fontWeight: 700 }}>
+                        ✓ {c.waiverYear}
+                        {c.signedAt && <div style={{ fontSize: 10, fontWeight: 400, opacity: 0.8 }}>{formatLastSeen(c.signedAt)}</div>}
+                      </span>
+                    : <span style={{ color: 'var(--header-bg)' }}>—</span>
+                  }
                 </td>
                 <td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                   {c.phone
