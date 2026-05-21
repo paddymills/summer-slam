@@ -38,7 +38,10 @@ function toJS(row, hidePI = false) {
     updatedAt:      row.updated_at      ?? null,
     signedUpAt:     row.signed_up_at    ?? null,
     checkedInAt:    row.checked_in_at   ?? null,
-    offWaterAt:     row.off_water_at    ?? null,
+    offWaterAt:       row.off_water_at       ?? null,
+    appSignedAt:      row.app_signed_at      ?? null,
+    boaterOrderNo:    row.boater_order_no    ?? '',
+    coAnglerOrderNo:  row.co_angler_order_no ?? '',
   };
 }
 
@@ -77,8 +80,9 @@ export async function onRequestPost({ request, env }) {
                co_angler_first, co_angler_last, co_angler_suffix, co_angler_phone, co_angler_email,
                boat_no, num_fish, lunker_weight, total_weight,
                lunker, option_field, paid, app_signed, buy_in,
-               raw_weight, dead_fish, short_fish, needs_attention, signed_up_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
+               raw_weight, dead_fish, short_fish, needs_attention,
+               boater_order_no, co_angler_order_no, signed_up_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
       args: [
         t(body.boaterFirst),   t(body.boaterLast),   t(body.boaterSuffix ?? ''),   t(body.boaterPhone),   t(body.boaterEmail),
         t(body.coAnglerFirst), t(body.coAnglerLast), t(body.coAnglerSuffix ?? ''), t(body.coAnglerPhone), t(body.coAnglerEmail),
@@ -95,6 +99,8 @@ export async function onRequestPost({ request, env }) {
         Number(body.deadFish)  || 0,
         Number(body.shortFish) || 0,
         body.needsAttention ? 1 : 0,
+        t(body.boaterOrderNo   ?? ''),
+        t(body.coAnglerOrderNo ?? ''),
       ],
     });
 

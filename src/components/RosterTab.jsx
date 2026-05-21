@@ -168,6 +168,34 @@ export default function RosterTab({
     return new Set(Object.keys(counts).filter(k => counts[k] > 1));
   }, [entries]);
 
+  const duplicateEntryIds = useMemo(() => {
+    const norm  = s => (s || '').toLowerCase().trim();
+    const normP = s => (s || '').replace(/\D/g, '');
+    const ids = new Set();
+    for (let i = 0; i < entries.length; i++) {
+      for (let j = i + 1; j < entries.length; j++) {
+        const a = entries[i], b = entries[j];
+        const pairs = [
+          [a.boaterFirst,   a.boaterLast,   a.boaterPhone,   b.boaterFirst,   b.boaterLast,   b.boaterPhone],
+          [a.boaterFirst,   a.boaterLast,   a.boaterPhone,   b.coAnglerFirst, b.coAnglerLast, b.coAnglerPhone],
+          [a.coAnglerFirst, a.coAnglerLast, a.coAnglerPhone, b.boaterFirst,   b.boaterLast,   b.boaterPhone],
+          [a.coAnglerFirst, a.coAnglerLast, a.coAnglerPhone, b.coAnglerFirst, b.coAnglerLast, b.coAnglerPhone],
+        ];
+        let found = false;
+        for (const [f1, l1, p1, f2, l2, p2] of pairs) {
+          if (!f1 && !l1) continue;
+          if (!f2 && !l2) continue;
+          const nameMatch  = norm(f1) === norm(f2) && norm(l1) === norm(l2);
+          const ph1 = normP(p1), ph2 = normP(p2);
+          const phoneMatch = ph1.length >= 10 && ph1 === ph2;
+          if (nameMatch || phoneMatch) { found = true; break; }
+        }
+        if (found) { ids.add(a.id); ids.add(b.id); }
+      }
+    }
+    return ids;
+  }, [entries]);
+
   function confirmed(label, action) { setConfirmAction({ label, action }); }
   function handleCancelEdit() { setEditingId(null); setEditValues({}); }
   function handleSaveInline(rowId, field) {
@@ -230,6 +258,7 @@ export default function RosterTab({
           <>
             {r.needsAttention && <span style={{ color: '#ffb450', marginRight: 4 }}>⚠️</span>}
             {r.boaterFirst}
+            {duplicateEntryIds.has(r.id) && <span title="Duplicate angler" style={{ marginLeft: 4, color: '#ffb450', fontWeight: 700 }}>!</span>}
           </>
         ),
       },
@@ -337,9 +366,9 @@ export default function RosterTab({
             </span>
           ),
       },
-      ...['lunker', 'option', 'paid', 'appSigned'].map(field => ({
+      ...['lunker', 'option', 'paid'].map(field => ({
         id: field, accessorKey: field,
-        header: field === 'appSigned' ? 'App Signed' : field.charAt(0).toUpperCase() + field.slice(1),
+        header: field.charAt(0).toUpperCase() + field.slice(1),
         size: COL_WIDTHS[field],
         sortingFn: numericSort,
         meta: {
@@ -349,6 +378,29 @@ export default function RosterTab({
         },
         cell: ({ row: { original: r } }) => <StatusCell val={r[field]} />,
       })),
+      {
+        id: 'appSigned', accessorKey: 'appSigned', header: 'App Signed', size: COL_WIDTHS.appSigned,
+        sortingFn: numericSort,
+        meta: {
+          getTdStyle: () => ({ textAlign: 'center', cursor: isUnlocked ? 'pointer' : undefined }),
+          onTdClick: (e, r) => { e.stopPropagation(); isUnlocked && onToggleField(r.id, 'appSigned'); },
+        },
+        cell: ({ row: { original: r } }) => {
+          const signed = r.appSigned === 1 || r.appSigned === '1';
+          if (!signed) return <span className="cell-red">NO</span>;
+          const ts = r.appSignedAt;
+          if (!ts) return <span className="cell-green">✓ Signed</span>;
+          const d = new Date(ts.includes('T') ? ts : ts.replace(' ', 'T') + (ts.includes('Z') ? '' : 'Z'));
+          return (
+            <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', lineHeight: 1.2 }}>
+              <span className="cell-green" style={{ fontSize: 12 }}>✓ Signed</span>
+              <span style={{ fontSize: 10, color: 'var(--header-bg)', whiteSpace: 'nowrap' }}>
+                {d.toLocaleDateString([], { month: '2-digit', day: '2-digit', year: '2-digit' })} {d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </span>
+            </span>
+          );
+        },
+      },
       {
         id: 'offWater', header: 'Off Water', size: COL_WIDTHS.offWater,
         accessorFn: r => offWater[r.id] ? 1 : 0,
@@ -421,7 +473,7 @@ export default function RosterTab({
       }] : []),
     ];
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editingId, editValues, isUnlocked, duplicateBoatNos, offWater, buyInBlurred, entryFee]);
+  }, [editingId, editValues, isUnlocked, duplicateBoatNos, duplicateEntryIds, offWater, buyInBlurred, entryFee]);
 
   const table = useReactTable({
     data: entries,
@@ -542,7 +594,10 @@ export default function RosterTab({
                 const isPaidSigned = (row.paid === 1 || row.paid === '1') && (row.appSigned === 1 || row.appSigned === '1');
                 return (
                   <tr key={row.id} style={!isPaidSigned ? { opacity: 0.65 } : undefined}>
-                    <td className="td-name">{row.boaterFirst}</td>
+                    <td className="td-name">
+                      {row.boaterFirst}
+                      {duplicateEntryIds.has(row.id) && <span title="Duplicate angler" style={{ marginLeft: 4, color: '#ffb450', fontWeight: 700 }}>!</span>}
+                    </td>
                     <td className="td-name">{row.boaterLast}{row.boaterSuffix ? ` ${row.boaterSuffix}` : ''}</td>
                     <td className="td-name">{row.coAnglerFirst}</td>
                     <td className="td-name">{row.coAnglerLast}{row.coAnglerSuffix ? ` ${row.coAnglerSuffix}` : ''}</td>
@@ -683,7 +738,10 @@ export default function RosterTab({
             <tbody>
               {lockedSorted.map(row => (
                 <tr key={row.id}>
-                  <td className="td-name">{row.boaterFirst}</td>
+                  <td className="td-name">
+                    {row.boaterFirst}
+                    {duplicateEntryIds.has(row.id) && <span title="Duplicate angler" style={{ marginLeft: 4, color: '#ffb450', fontWeight: 700 }}>!</span>}
+                  </td>
                   <td className="td-name">{row.boaterLast}{row.boaterSuffix ? ` ${row.boaterSuffix}` : ''}</td>
                   <td className="td-name">{row.coAnglerFirst}</td>
                   <td className="td-name">{row.coAnglerLast}{row.coAnglerSuffix ? ` ${row.coAnglerSuffix}` : ''}</td>
@@ -702,6 +760,56 @@ export default function RosterTab({
             </tbody>
           </table>
         </div>
+        {isOperator && (() => {
+          const pending = entries.filter(e => !(e.appSigned === 1 || e.appSigned === '1'));
+          if (pending.length === 0) return null;
+          return (
+            <div style={{ flexShrink: 0, borderTop: '2px solid rgba(240,173,78,0.4)', overflowY: 'auto', maxHeight: 240 }}>
+              <div style={{ padding: '8px 16px 4px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 11, fontWeight: 700, color: '#f0ad4e', textTransform: 'uppercase', letterSpacing: 1 }}>
+                  Pending Applications
+                </span>
+                <span style={{ fontSize: 11, background: 'rgba(240,173,78,0.2)', color: '#f0ad4e', borderRadius: 10, padding: '1px 8px', fontWeight: 700 }}>
+                  {pending.length}
+                </span>
+              </div>
+              <table style={{ width: '100%', tableLayout: 'fixed' }}>
+                <colgroup>
+                  <col style={{ width: '35%' }} />
+                  <col style={{ width: '35%' }} />
+                  <col style={{ width: '15%' }} />
+                  <col style={{ width: '15%' }} />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th style={{ textAlign: 'left', fontSize: 11, color: 'var(--header-bg)', fontWeight: 600, padding: '4px 8px' }}>Boater</th>
+                    <th style={{ textAlign: 'left', fontSize: 11, color: 'var(--header-bg)', fontWeight: 600, padding: '4px 8px' }}>Co-Angler</th>
+                    <th style={{ textAlign: 'right', fontSize: 11, color: 'var(--header-bg)', fontWeight: 600, padding: '4px 8px' }}>Fee</th>
+                    <th style={{ textAlign: 'center', fontSize: 11, color: 'var(--header-bg)', fontWeight: 600, padding: '4px 8px' }}>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pending.map(row => (
+                    <tr key={row.id} style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                      <td className="td-name" style={{ padding: '6px 8px' }}>
+                        {[row.boaterFirst, row.boaterLast, row.boaterSuffix].filter(Boolean).join(' ') || '—'}
+                      </td>
+                      <td className="td-name" style={{ padding: '6px 8px' }}>
+                        {[row.coAnglerFirst, row.coAnglerLast, row.coAnglerSuffix].filter(Boolean).join(' ') || '—'}
+                      </td>
+                      <td style={{ textAlign: 'right', fontWeight: 600, fontSize: 13, padding: '6px 8px', color: parseFloat(row.buyIn) > 0 ? 'var(--white)' : 'var(--header-bg)' }}>
+                        {parseFloat(row.buyIn) > 0 ? `$${parseFloat(row.buyIn).toFixed(2)}` : '—'}
+                      </td>
+                      <td style={{ textAlign: 'center', padding: '6px 8px' }} onClick={e => e.stopPropagation()}>
+                        <button className="btn btn-outline btn-sm" onClick={() => onSignApp?.(row)}>Sign</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          );
+        })()}
       </div>
     );
   }
@@ -750,7 +858,7 @@ export default function RosterTab({
         </button>
 
         <button className="btn btn-outline" onClick={() => setDrawModal(true)} style={{ fontSize: 13 }}>
-          🎲 Assign Boat #'s
+          Assign Boat #'s
         </button>
 
         <div style={{ flex: 1 }} />
@@ -935,11 +1043,11 @@ export default function RosterTab({
           <div onClick={() => !drawBusy && setDrawModal(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 2000 }} />
           <div style={{
             position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
-            zIndex: 2001, background: 'var(--card-bg, #1a2a3a)', border: '1px solid rgba(255,180,80,0.4)',
-            borderRadius: 14, padding: '28px 32px', width: 'min(440px, 92vw)', boxShadow: '0 12px 48px rgba(0,0,0,0.6)',
+            zIndex: 2001, background: 'var(--navy-mid)', border: '1px solid var(--gold)',
+            borderRadius: 14, padding: '28px 32px', width: 'min(440px, 92vw)', boxShadow: '0 12px 48px rgba(0,0,0,0.45)',
           }}>
-            <div style={{ fontSize: 19, fontWeight: 800, marginBottom: 10 }}>🎲 Assign Boat Numbers</div>
-            <div style={{ fontSize: 14, color: 'var(--header-bg)', lineHeight: 1.65, marginBottom: 20 }}>
+            <div style={{ fontSize: 19, fontWeight: 800, marginBottom: 10, color: 'var(--white)' }}>Assign Boat Numbers</div>
+            <div style={{ fontSize: 14, color: 'var(--text-muted)', lineHeight: 1.65, marginBottom: 20 }}>
               <strong style={{ color: 'var(--white)' }}>Re-draw All</strong> randomly shuffles all{' '}
               <strong style={{ color: 'var(--gold-light)' }}>{registeredCount}</strong> paid + signed entries and assigns boat numbers 1–{registeredCount}.
               Existing boat numbers will be overwritten.

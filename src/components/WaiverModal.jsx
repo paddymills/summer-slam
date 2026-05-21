@@ -506,6 +506,19 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
           </div>
         )}
 
+        {/* ── Order Numbers ── */}
+        {(entry.boaterOrderNo || entry.coAnglerOrderNo) && (
+          <div style={{ fontSize: 11, color: '#555', marginBottom: 16, marginTop: -10 }}>
+            {entry.boaterOrderNo && (
+              <span>Boater Order #: <strong style={{ color: '#222' }}>{entry.boaterOrderNo}</strong></span>
+            )}
+            {entry.boaterOrderNo && entry.coAnglerOrderNo && <span style={{ margin: '0 8px' }}>·</span>}
+            {entry.coAnglerOrderNo && (
+              <span>Co-Angler Order #: <strong style={{ color: '#222' }}>{entry.coAnglerOrderNo}</strong></span>
+            )}
+          </div>
+        )}
+
         {/* ── Angler Info ── */}
         <p style={SECTION_HEAD}>Anglers</p>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginBottom: 20 }}>
@@ -717,20 +730,22 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
               >
                 Cancel
               </button>
-              <button
-                type="button"
-                onClick={handleSubmit}
-                disabled={submitting || !unlocked}
-                style={{
-                  flex: 1, padding: '13px 0', borderRadius: 8,
-                  border: 'none', background: unlocked ? '#1a5276' : '#555',
-                  fontSize: 15, fontWeight: 700,
-                  cursor: (submitting || !unlocked) ? 'not-allowed' : 'pointer',
-                  color: '#fff', opacity: (submitting || !unlocked) ? 0.5 : 1,
-                }}
-              >
-                {submitting ? 'Saving…' : '✓ Submit Application'}
-              </button>
+              {unlocked && (
+                <button
+                  type="button"
+                  onClick={handleSubmit}
+                  disabled={submitting}
+                  style={{
+                    flex: 1, padding: '13px 0', borderRadius: 8,
+                    border: 'none', background: '#1a5276',
+                    fontSize: 15, fontWeight: 700,
+                    cursor: submitting ? 'not-allowed' : 'pointer',
+                    color: '#fff', opacity: submitting ? 0.5 : 1,
+                  }}
+                >
+                  {submitting ? 'Saving…' : '✓ Submit Application'}
+                </button>
+              )}
             </div>
             {!unlocked && (
               <button

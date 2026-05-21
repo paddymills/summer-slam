@@ -16,6 +16,7 @@ const EMPTY = {
   coAnglerFirst: '', coAnglerLast: '', coAnglerSuffix: '', coAnglerPhone: '', coAnglerEmail: '',
   boatNo: '', numFish: '', lunkerWeight: '', totalWeight: '',
   lunker: '', option: '', paid: '', appSigned: '', buyIn: '',
+  boaterOrderNo: '', coAnglerOrderNo: '',
   needsAttention: false,
   rawWeight: null, deadFish: 0, shortFish: 0,
   offWaterAt: '',
@@ -90,7 +91,9 @@ export default function EditModal({ entry, onSave, onCancel, settings, operatorM
       paid:           entry.paid          ?? '',
       appSigned:      entry.appSigned     ?? '',
       buyIn:          entry.buyIn         ?? '',
-      needsAttention: entry.needsAttention ?? false,
+      boaterOrderNo:   entry.boaterOrderNo   ?? '',
+      coAnglerOrderNo: entry.coAnglerOrderNo ?? '',
+      needsAttention:  entry.needsAttention  ?? false,
       rawWeight:      entry.rawWeight     ?? null,
       deadFish:       entry.deadFish      ?? 0,
       shortFish:      entry.shortFish     ?? 0,
@@ -367,6 +370,18 @@ export default function EditModal({ entry, onSave, onCancel, settings, operatorM
             )}
 
             <div className="edit-section-label">Payment &amp; Status</div>
+            <div className="edit-grid-2" style={{ marginBottom: 12 }}>
+              <div className="form-field">
+                <label htmlFor="em-boater-order-no">Boater Order # <span style={{ fontWeight: 400, opacity: 0.5, fontSize: 11 }}>(optional)</span></label>
+                <input id="em-boater-order-no" name="boaterOrderNo" type="text" value={form.boaterOrderNo} placeholder="Online order #"
+                       onChange={e => set('boaterOrderNo', e.target.value)} />
+              </div>
+              <div className="form-field">
+                <label htmlFor="em-co-order-no">Co-Angler Order # <span style={{ fontWeight: 400, opacity: 0.5, fontSize: 11 }}>(optional)</span></label>
+                <input id="em-co-order-no" name="coAnglerOrderNo" type="text" value={form.coAnglerOrderNo} placeholder="Online order #"
+                       onChange={e => set('coAnglerOrderNo', e.target.value)} />
+              </div>
+            </div>
             {operatorMode ? (
               <div className="edit-grid-3">
                 <div className="form-field">

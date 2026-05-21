@@ -1,3 +1,5 @@
+import { jsPDF } from 'jspdf';
+
 export const LEGAL_CLAUSES = [
   'In consideration of Susquehanna Fishing Tackle, Inc. allowing me to participate in this tournament, I acknowledge and agree as follows:',
   '<strong>1.</strong> I have read and understand the description of the tournament and the Official Rules of this tournament. I will obey all rules and understand that any violation may result in immediate disqualification without refund of my entry fee. I also understand that tournament officials may reject my application for any reason and in that event will refund my entry fee.',
@@ -50,6 +52,10 @@ function waiverHTML(entry, boaterSig, coaSig, settings) {
   const buyInAmt    = parseFloat(entry.buyIn || 0).toFixed(2);
   const paidLabel   = entry.paid ? '— Paid in Full' : '— Partial';
   const extras      = [entry.lunker && `Lunker ($${lunkerFee})`, entry.option && `Option ($${optFee})`].filter(Boolean).join(' · ');
+  const orderParts  = [
+    entry.boaterOrderNo    && `Boater Order #: ${entry.boaterOrderNo}`,
+    entry.coAnglerOrderNo  && `Co-Angler Order #: ${entry.coAnglerOrderNo}`,
+  ].filter(Boolean);
 
   const clauseP = LEGAL_CLAUSES.map(c =>
     `<p style="font-size:11px;line-height:1.4;margin:0 0 5px;text-align:justify;color:#222;">${c}</p>`
@@ -64,6 +70,7 @@ function waiverHTML(entry, boaterSig, coaSig, settings) {
       <p style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin:0 0 5px;color:#333;">Entry Fees</p>
       <div style="border:1.5px solid #2e7d32;border-radius:6px;padding:6px 10px;margin-bottom:10px;background:#f1f8e9;font-size:12px;">
         <strong>Buy In:</strong> $${buyInAmt} ${paidLabel}${extras ? `&nbsp;&nbsp;·&nbsp;&nbsp;${extras}` : ''}
+        ${orderParts.length ? `<div style="margin-top:4px;font-size:11px;color:#555;">${orderParts.join('&nbsp;&nbsp;·&nbsp;&nbsp;')}</div>` : ''}
       </div>
 
       <p style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin:0 0 5px;color:#333;">Anglers</p>
@@ -230,7 +237,11 @@ export function printBlankApplication(settings, formData = null) {
         &nbsp;&nbsp;
         Option: <strong>$${optFee}</strong> <input type="checkbox" style="vertical-align:middle;" /> Yes
         &nbsp;&nbsp;&nbsp;
-        Buy-In Total:${line('', '120px')}
+        Buy-In Total:${line('', '100px')}
+        &nbsp;&nbsp;&nbsp;
+        Boater Order #:${line(f.boaterOrderNo || '', '90px')}
+        &nbsp;&nbsp;
+        Co-Angler Order #:${line(f.coAnglerOrderNo || '', '90px')}
       </div>
 
       <p style="font-size:8.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin:0 0 3px;color:#333;">Anglers</p>
@@ -288,4 +299,167 @@ export function printAllWaivers(signedEntries, contacts, settings) {
       .waiver { max-width: 680px; margin: 0 auto; padding: 10px 12px; box-sizing: border-box; }
     `,
   });
+}
+
+export async function shareBlankApplication(settings, formData = null) {
+
+  const year      = new Date().getFullYear();
+  const entryFee  = parseFloat(settings?.fees?.entryFee)  || 250;
+  const lunkerFee = parseFloat(settings?.fees?.lunkerFee) || 10;
+  const optFee    = parseFloat(settings?.fees?.optFee)    || 20;
+  const tDate     = settings?.tournamentDate
+    ? new Date(settings.tournamentDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+    : '';
+  const header = [tDate, settings?.tournamentLocation].filter(Boolean).join(' · ');
+
+  const f = formData || {};
+  const boaterName = [f.boaterFirst, f.boaterLast, f.boaterSuffix].filter(Boolean).join(' ');
+  const coaName    = [f.coAnglerFirst, f.coAnglerLast, f.coAnglerSuffix].filter(Boolean).join(' ');
+  const stripTags  = s => s.replace(/<[^>]+>/g, '');
+
+  const doc = new jsPDF({ unit: 'mm', format: 'letter' });
+  const PW = 215.9, M = 15, CW = PW - 2 * M;
+  // line height in mm for a given pt size at 1.15× factor
+  const lh = pt => pt * 1.15 * 25.4 / 72;
+  let y = M;
+
+  const sf = (style, pt) => { doc.setFont('helvetica', style); doc.setFontSize(pt); };
+  const hr = (w = 0.5) => {
+    doc.setLineWidth(w); doc.setDrawColor(30, 30, 30);
+    doc.line(M, y, PW - M, y); y += 3;
+  };
+  const underline = (x1, x2, yy) => {
+    doc.setLineWidth(0.3); doc.setDrawColor(120, 120, 120);
+    doc.line(x1, yy + 0.5, x2, yy + 0.5);
+  };
+  const sectionLabel = text => {
+    sf('bold', 7); doc.setTextColor(60, 60, 60);
+    doc.text(text.toUpperCase(), M, y); y += 4;
+    doc.setTextColor(20, 20, 20);
+  };
+
+  // ── Title ──────────────────────────────────────────────
+  sf('bold', 14); doc.setTextColor(20, 20, 20);
+  doc.text(`${year} SUMMER SLAM ENTRY FORM`, PW / 2, y, { align: 'center' }); y += 5;
+  if (header) {
+    sf('normal', 9); doc.setTextColor(80, 80, 80);
+    doc.text(header, PW / 2, y, { align: 'center' }); y += 4;
+    doc.setTextColor(20, 20, 20);
+  }
+  y += 1; hr(0.8); y += 1;
+
+  // ── Entry Fees ─────────────────────────────────────────
+  sectionLabel('Entry Fees');
+  sf('normal', 8.5);
+  let x = M;
+  doc.text('Entry Fee: ', x, y); x += doc.getTextWidth('Entry Fee: ');
+  sf('bold', 8.5); doc.text(`$${entryFee}`, x, y); x += doc.getTextWidth(`$${entryFee}`) + 6;
+  sf('normal', 8.5);
+  doc.setLineWidth(0.3); doc.setDrawColor(100, 100, 100);
+  doc.rect(x, y - 2.8, 3, 3); x += 4;
+  doc.text(`Lunker ($${lunkerFee})`, x, y); x += doc.getTextWidth(`Lunker ($${lunkerFee})`) + 6;
+  doc.rect(x, y - 2.8, 3, 3); x += 4;
+  doc.text(`Option ($${optFee})`, x, y); x += doc.getTextWidth(`Option ($${optFee})`) + 6;
+  doc.text('Buy-In:', x, y); x += doc.getTextWidth('Buy-In:') + 1;
+  underline(x, x + 28, y); x += 30;
+  doc.text('Boater Order #:', x, y); x += doc.getTextWidth('Boater Order #:') + 1;
+  underline(x, x + 28, y);
+  if (f.boaterOrderNo) { sf('bold', 8.5); doc.text(f.boaterOrderNo, x + 1, y); sf('normal', 8.5); }
+  x += 30;
+  doc.text('Co-Angler Order #:', x, y); x += doc.getTextWidth('Co-Angler Order #:') + 1;
+  underline(x, PW - M, y);
+  if (f.coAnglerOrderNo) { sf('bold', 8.5); doc.text(f.coAnglerOrderNo, x + 1, y); sf('normal', 8.5); }
+  y += 7;
+
+  // ── Anglers ────────────────────────────────────────────
+  sectionLabel('Anglers');
+  const drawAnglerRow = (label, name, phone, email) => {
+    sf('bold', 8); doc.text(label, M, y);
+    sf('normal', 8);
+    let rx = M + 20;
+    doc.text('Name:', rx, y); rx += doc.getTextWidth('Name:') + 1;
+    underline(rx, rx + 50, y);
+    if (name) { sf('bold', 8); doc.text(name, rx + 1, y, { maxWidth: 49 }); sf('normal', 8); }
+    rx += 52;
+    doc.text('Phone:', rx, y); rx += doc.getTextWidth('Phone:') + 1;
+    underline(rx, rx + 32, y);
+    if (phone) { sf('bold', 8); doc.text(phone, rx + 1, y); sf('normal', 8); }
+    rx += 34;
+    sf('normal', 7.5);
+    doc.text('Email:', rx, y); rx += doc.getTextWidth('Email:') + 1;
+    underline(rx, PW - M, y);
+    if (email) { sf('bold', 7.5); doc.text(email, rx + 1, y, { maxWidth: PW - M - rx - 2 }); sf('normal', 7.5); }
+    y += 5.5;
+  };
+  drawAnglerRow('Boater', boaterName, f.boaterPhone, f.boaterEmail);
+  drawAnglerRow('Co-Angler', coaName, f.coAnglerPhone, f.coAnglerEmail);
+  y += 1; hr(0.8); y += 2;
+
+  // ── Legal Clauses ──────────────────────────────────────
+  sectionLabel('Participant Agreement, Release and Acknowledgment of Risk');
+  sf('normal', 8); doc.setTextColor(30, 30, 30);
+  const lineH = lh(8);
+  for (const clause of LEGAL_CLAUSES) {
+    const lines = doc.splitTextToSize(stripTags(clause), CW);
+    doc.text(lines, M, y);
+    y += lines.length * lineH + 2;
+  }
+  y += 2;
+
+  // ── Waiver Banner ──────────────────────────────────────
+  sf('bold', 7.5); doc.setTextColor(20, 20, 20);
+  const bannerText = `THIS SIGNED WAIVER IS IN EFFECT FOR ANY SUSQUEHANNA FISHING TACKLE, INC. TOURNAMENT IN ${year}`;
+  const bannerLines = doc.splitTextToSize(bannerText, CW - 6);
+  const bannerH = bannerLines.length * lh(7.5) + 5;
+  doc.setDrawColor(20, 20, 20); doc.setLineWidth(0.7);
+  doc.rect(M, y, CW, bannerH);
+  doc.text(bannerLines, PW / 2, y + bannerH / 2 + 1, { align: 'center' });
+  y += bannerH + 5;
+
+  // ── Signature Blocks ───────────────────────────────────
+  const sigW = (CW - 8) / 2, sigH = 22;
+  [[`Boater`, 1], [`Co-Angler`, 2]].forEach(([label, num], i) => {
+    const sx = M + i * (sigW + 8);
+    sf('bold', 8); doc.setTextColor(20, 20, 20);
+    doc.text(`#${num} ${label} Signature`, sx, y);
+    sf('normal', 7); doc.setTextColor(100, 100, 100);
+    doc.text(`(Good through 12/31/${year})`, sx + doc.getTextWidth(`#${num} ${label} Signature `) + 1, y);
+    doc.setFillColor(250, 250, 250); doc.setDrawColor(150, 150, 150); doc.setLineWidth(0.4);
+    doc.rect(sx, y + 2, sigW, sigH, 'FD');
+    sf('normal', 7.5); doc.setTextColor(60, 60, 60);
+    const dy = y + sigH + 6;
+    doc.text('Date:', sx, dy);
+    underline(sx + doc.getTextWidth('Date:') + 1, sx + sigW, dy);
+  });
+
+  // ── Share or Download ──────────────────────────────────
+  const SUBMIT_EMAIL = 'info@sfttackle.com';
+  const boaterNameForFile = [f.boaterFirst, f.boaterLast].filter(Boolean).join(' ');
+  const orderParts = [f.boaterOrderNo, f.coAnglerOrderNo].filter(Boolean);
+  const orderPart = orderParts.length ? ` · Order #${orderParts.join(', ')}` : '';
+  const subjectLine = boaterNameForFile
+    ? `${year} Summer Slam Entry — ${boaterNameForFile}${orderPart}`
+    : `${year} Summer Slam Entry Form${orderPart}`;
+  const fileName = boaterNameForFile
+    ? `${year}_Summer_Slam_Entry_${boaterNameForFile.replace(/\s+/g, '_')}.pdf`
+    : `${year}_Summer_Slam_Entry.pdf`;
+  const pdfBlob  = doc.output('blob');
+  const pdfFile  = new File([pdfBlob], fileName, { type: 'application/pdf' });
+
+  if (navigator.canShare && navigator.canShare({ files: [pdfFile] })) {
+    await navigator.share({
+      title: subjectLine,
+      text: `Please email the attached entry form to ${SUBMIT_EMAIL}`,
+      files: [pdfFile],
+    });
+  } else {
+    // Download the PDF, then open a mailto so the user can email it
+    const url = URL.createObjectURL(pdfBlob);
+    const a   = document.createElement('a');
+    a.href = url; a.download = fileName;
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    window.location.href = `mailto:${SUBMIT_EMAIL}?subject=${encodeURIComponent(subjectLine)}&body=${encodeURIComponent(`Please find the attached entry form.\n\n(Attach the downloaded PDF: ${fileName})`)}`;
+  }
 }

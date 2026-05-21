@@ -38,7 +38,10 @@ function toJS(row) {
     updatedAt:      row.updated_at      ?? null,
     signedUpAt:     row.signed_up_at    ?? null,
     checkedInAt:    row.checked_in_at   ?? null,
-    offWaterAt:     row.off_water_at    ?? null,
+    offWaterAt:       row.off_water_at       ?? null,
+    appSignedAt:      row.app_signed_at      ?? null,
+    boaterOrderNo:    row.boater_order_no    ?? '',
+    coAnglerOrderNo:  row.co_angler_order_no ?? '',
   };
 }
 
@@ -66,10 +69,12 @@ export async function onRequestPut({ params, request, env }) {
               boat_no=?, num_fish=?, lunker_weight=?, total_weight=?,
               lunker=?, option_field=?, paid=?, app_signed=?, buy_in=?,
               raw_weight=?, dead_fish=?, short_fish=?, needs_attention=?,
+              boater_order_no=?, co_angler_order_no=?,
               signed_up_at  = CASE WHEN signed_up_at IS NULL AND ? != '' THEN CURRENT_TIMESTAMP ELSE signed_up_at END,
               weighed_at   = CASE WHEN ? > 0 AND ? = 0 THEN COALESCE(?, CURRENT_TIMESTAMP) ELSE weighed_at END,
               checked_in_at = CASE WHEN ? != '' AND checked_in_at IS NULL THEN CURRENT_TIMESTAMP ELSE checked_in_at END,
               off_water_at  = CASE WHEN ? = 1 THEN NULLIF(?, '') WHEN ? = 1 THEN COALESCE(off_water_at, CURRENT_TIMESTAMP) WHEN ? = 0 THEN NULL ELSE off_water_at END,
+              app_signed_at = CASE WHEN ? = 1 AND app_signed_at IS NULL THEN CURRENT_TIMESTAMP WHEN ? = 0 THEN NULL ELSE app_signed_at END,
               updated_at   = CURRENT_TIMESTAMP
             WHERE id=? AND (? IS NULL OR updated_at = ?)`,
       args: [
@@ -88,6 +93,8 @@ export async function onRequestPut({ params, request, env }) {
         Number(body.deadFish)  || 0,
         Number(body.shortFish) || 0,
         body.needsAttention ? 1 : 0,
+        t(body.boaterOrderNo   ?? ''),
+        t(body.coAnglerOrderNo ?? ''),
         t(body.boaterFirst),
         newTotalWeight, preserveWeighTime, clientWeighedAt,
         t(body.boatNo),
@@ -95,6 +102,8 @@ export async function onRequestPut({ params, request, env }) {
         body.offWaterAtDirect ? (body.offWaterAt || '') : '',
         body.offWater === true ? 1 : body.offWater === false ? 0 : -1,
         body.offWater === true ? 1 : body.offWater === false ? 0 : -1,
+        body.appSigned === '' ? 0 : Number(body.appSigned),
+        body.appSigned === '' ? 0 : Number(body.appSigned),
         params.id, clientUpdatedAt, clientUpdatedAt,
       ],
     });

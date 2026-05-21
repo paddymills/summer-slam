@@ -53,7 +53,10 @@ function parseEntry(raw) {
     updatedAt:      raw.updated_at    ?? raw.updatedAt    ?? null,
     signedUpAt:     raw.signed_up_at  ?? raw.signedUpAt  ?? null,
     checkedInAt:    raw.checked_in_at ?? raw.checkedInAt ?? null,
-    offWaterAt:     raw.off_water_at  ?? raw.offWaterAt  ?? null,
+    offWaterAt:      raw.off_water_at      ?? raw.offWaterAt      ?? null,
+    appSignedAt:     raw.app_signed_at     ?? raw.appSignedAt     ?? null,
+    boaterOrderNo:   raw.boater_order_no   ?? raw.boaterOrderNo   ?? '',
+    coAnglerOrderNo: raw.co_angler_order_no ?? raw.coAnglerOrderNo ?? '',
   };
 }
 

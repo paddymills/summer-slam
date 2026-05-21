@@ -17,39 +17,52 @@ export async function onRequestPost({ request, env }) {
 
     if (entries.length === 0) return Response.json({ count: 0, mode });
 
+    let statements = [];
+    let count = 0;
+
     if (mode === 'missing') {
       const without = entries.filter(e => !e.boat_no || e.boat_no.trim() === '');
       if (without.length === 0) return Response.json({ count: 0, mode });
-      const maxNo = entries.reduce((max, e) => {
-        const n = parseFloat(e.boat_no);
-        return isNaN(n) ? max : Math.max(max, n);
-      }, 0);
-      for (let i = 0; i < without.length; i++) {
-        await db.execute({
+
+      // Build a set of all numeric boat numbers already in use
+      const usedNos = new Set(
+        entries
+          .filter(e => e.boat_no && e.boat_no.trim() !== '')
+          .map(e => parseInt(e.boat_no, 10))
+          .filter(n => !isNaN(n))
+      );
+
+      // Fill from 1 upward, skipping any already-used numbers
+      let candidate = 1;
+      for (const e of without) {
+        while (usedNos.has(candidate)) candidate++;
+        usedNos.add(candidate);
+        statements.push({
           sql:  'UPDATE entries SET boat_no = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-          args: [String(maxNo + i + 1), without[i].id],
+          args: [String(candidate), e.id],
         });
+        candidate++;
       }
-      try {
-        await db.execute('CREATE TABLE IF NOT EXISTS event_log (id INTEGER PRIMARY KEY AUTOINCREMENT, event_type TEXT NOT NULL, entry_id INTEGER, boat_no TEXT, boater_name TEXT, value TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)');
-        await db.execute({ sql: 'INSERT INTO event_log (event_type, value) VALUES (?,?)', args: ['boat_draw', JSON.stringify({ mode, count: without.length })] });
-      } catch (_) {}
-      return Response.json({ count: without.length, mode });
+      count = without.length;
+    } else {
+      // redraw — shuffle all eligible entries and assign 1-N
+      const shuffled = [...entries].sort(() => Math.random() - 0.5);
+      statements = shuffled.map((e, i) => ({
+        sql:  'UPDATE entries SET boat_no = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        args: [String(i + 1), e.id],
+      }));
+      count = shuffled.length;
     }
 
-    // redraw — shuffle all eligible entries and assign 1-N
-    const shuffled = [...entries].sort(() => Math.random() - 0.5);
-    for (let i = 0; i < shuffled.length; i++) {
-      await db.execute({
-        sql:  'UPDATE entries SET boat_no = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-        args: [String(i + 1), shuffled[i].id],
-      });
-    }
+    // Execute all updates atomically — no partial state on failure
+    await db.batch(statements);
+
     try {
       await db.execute('CREATE TABLE IF NOT EXISTS event_log (id INTEGER PRIMARY KEY AUTOINCREMENT, event_type TEXT NOT NULL, entry_id INTEGER, boat_no TEXT, boater_name TEXT, value TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)');
-      await db.execute({ sql: 'INSERT INTO event_log (event_type, value) VALUES (?,?)', args: ['boat_draw', JSON.stringify({ mode, count: shuffled.length })] });
+      await db.execute({ sql: 'INSERT INTO event_log (event_type, value) VALUES (?,?)', args: ['boat_draw', JSON.stringify({ mode, count })] });
     } catch (_) {}
-    return Response.json({ count: shuffled.length, mode });
+
+    return Response.json({ count, mode });
   } catch (e) {
     return Response.json({ error: e.message }, { status: 500 });
   }

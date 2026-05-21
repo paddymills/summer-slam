@@ -3,8 +3,9 @@ import ContactSuggest from './ContactSuggest';
 import EmailInput from './EmailInput';
 import WaiverModal from './WaiverModal';
 import { formatPhone } from '../utils/phone';
+import { evalMath } from '../utils/evalMath';
 import { fetchContactsWithSignatures, saveContactWaiver, lookupContactId } from '../utils/api';
-import { printAllWaivers, viewWaiverForEntry, contactsToSigs, printBlankApplication, LEGAL_CLAUSES } from '../utils/printWaivers';
+import { printAllWaivers, viewWaiverForEntry, contactsToSigs, printBlankApplication, shareBlankApplication, LEGAL_CLAUSES } from '../utils/printWaivers';
 
 const FIELD = {
   background: 'rgba(255,255,255,0.06)',
@@ -42,6 +43,7 @@ const SUFFIX_STYLE = {
 const EMPTY = {
   boaterFirst: '', boaterLast: '', boaterSuffix: '', boaterPhone: '', boaterEmail: '',
   coAnglerFirst: '', coAnglerLast: '', coAnglerSuffix: '', coAnglerPhone: '', coAnglerEmail: '',
+  boaterOrderNo: '', coAnglerOrderNo: '',
 };
 
 function PublicSignUpView({ settings }) {
@@ -65,7 +67,7 @@ function PublicSignUpView({ settings }) {
             </button>
           </div>
           <p style={{ fontSize: 13, color: 'var(--header-bg)', marginBottom: 20, lineHeight: 1.6 }}>
-            Fill in your information below, then tap <strong style={{ color: 'var(--white)' }}>Print Application</strong> to generate a paper form to sign and return to tournament staff.
+            Fill in your information below, then tap <strong style={{ color: 'var(--white)' }}>Print Application</strong> to generate a paper form, or <strong style={{ color: 'var(--white)' }}>Share / Email PDF</strong> to send it to yourself. Sign and return to tournament staff.
           </p>
 
           {/* Legal text */}
@@ -146,15 +148,40 @@ function PublicSignUpView({ settings }) {
               </div>
             </div>
 
-            {/* Print button */}
-            <button
-              type="button"
-              className="btn btn-gold"
-              style={{ fontSize: 16, padding: '13px 0' }}
-              onClick={() => printBlankApplication(settings, form)}
-            >
-              🖨 Print Application
-            </button>
+            {/* Order #s */}
+            <div style={{ display: 'flex', gap: 10 }}>
+              <div style={{ flex: 1 }}>
+                <label style={LABEL}>Boater Order # <span style={{ fontWeight: 400, opacity: 0.55, fontSize: 11, textTransform: 'none', letterSpacing: 0 }}>(optional)</span></label>
+                <input type="text" value={form.boaterOrderNo} placeholder="Online order #" onChange={e => set('boaterOrderNo', e.target.value)} style={FIELD} />
+              </div>
+              <div style={{ flex: 1 }}>
+                <label style={LABEL}>Co-Angler Order # <span style={{ fontWeight: 400, opacity: 0.55, fontSize: 11, textTransform: 'none', letterSpacing: 0 }}>(optional)</span></label>
+                <input type="text" value={form.coAnglerOrderNo} placeholder="Online order #" onChange={e => set('coAnglerOrderNo', e.target.value)} style={FIELD} />
+              </div>
+            </div>
+
+            {/* Print / Share buttons */}
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                type="button"
+                className="btn btn-gold"
+                style={{ flex: 1, fontSize: 15, padding: '13px 0' }}
+                onClick={() => printBlankApplication(settings, form)}
+              >
+                🖨 Print Application
+              </button>
+              <button
+                type="button"
+                className="btn btn-outline"
+                style={{ flex: 1, fontSize: 15, padding: '13px 0' }}
+                onClick={async () => { try { await shareBlankApplication(settings, form); } catch (err) { if (err?.name !== 'AbortError') alert('Could not share PDF: ' + err?.message); } }}
+              >
+                📤 Share / Email PDF
+              </button>
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--header-bg)', textAlign: 'center', marginTop: -6 }}>
+              Email to <strong style={{ color: 'var(--white)' }}>info@sfttackle.com</strong>
+            </div>
 
             <button
               type="button"
@@ -242,7 +269,7 @@ export default function SignUpTab({ onAddEntry, onDeleteEntry, settings, entries
       if (!form.coAnglerLast.trim())  errs.coAnglerLast  = 'Required';
       if (!form.coAnglerPhone.trim()) errs.coAnglerPhone  = 'Required';
     }
-    if (paperCopy && (!feeAmount || parseFloat(feeAmount) <= 0)) errs.feeAmount = 'Required for paper copy';
+    if (paperCopy && (!feeAmount || parseFloat(evalMath(String(feeAmount))) <= 0)) errs.feeAmount = 'Required for paper copy';
     return errs;
   }
 
@@ -254,7 +281,7 @@ export default function SignUpTab({ onAddEntry, onDeleteEntry, settings, entries
     const boaterCid    = boaterContactIdRef.current;
     const coAnglerCid  = coAnglerContactIdRef.current;
 
-    const buyInNum = parseFloat(feeAmount) || 0;
+    const buyInNum = parseFloat(evalMath(String(feeAmount))) || 0;
     const paid     = buyInNum >= entryFee ? 1 : 0;
 
     const entry = {
@@ -276,6 +303,8 @@ export default function SignUpTab({ onAddEntry, onDeleteEntry, settings, entries
       boatNo: '', numFish: 0, lunkerWeight: 0, totalWeight: 0,
       boaterContactId:   boaterCid  ?? null,
       coAnglerContactId: coAnglerCid ?? null,
+      boaterOrderNo:   form.boaterOrderNo.trim(),
+      coAnglerOrderNo: form.coAnglerOrderNo.trim(),
     };
 
     setSubmitting(true);
@@ -333,6 +362,53 @@ export default function SignUpTab({ onAddEntry, onDeleteEntry, settings, entries
     boaterContactIdRef.current  = null;
     coAnglerContactIdRef.current = null;
     setTimeout(() => boaterFirstRef.current?.focus(), 0);
+  }
+
+  async function handleSaveForLater() {
+    const errs = validate();
+    if (Object.keys(errs).length) { setErrors(errs); return; }
+
+    const buyInNum = parseFloat(evalMath(String(feeAmount))) || 0;
+    const paid     = buyInNum >= entryFee ? 1 : 0;
+
+    const entry = {
+      boaterFirst:    form.boaterFirst.trim(),
+      boaterLast:     form.boaterLast.trim(),
+      boaterSuffix:   form.boaterSuffix,
+      boaterPhone:    formatPhone(form.boaterPhone.trim()),
+      boaterEmail:    form.boaterEmail.trim(),
+      coAnglerFirst:  form.coAnglerFirst.trim(),
+      coAnglerLast:   form.coAnglerLast.trim(),
+      coAnglerSuffix: form.coAnglerSuffix,
+      coAnglerPhone:  formatPhone(form.coAnglerPhone.trim()),
+      coAnglerEmail:  form.coAnglerEmail.trim(),
+      lunker: feeLunker ? 1 : 0,
+      option: feeOption ? 1 : 0,
+      paid,
+      appSigned: 0,
+      buyIn: buyInNum,
+      boatNo: '', numFish: 0, lunkerWeight: 0, totalWeight: 0,
+      boaterContactId:   boaterContactIdRef.current ?? null,
+      coAnglerContactId: coAnglerContactIdRef.current ?? null,
+      boaterOrderNo:   form.boaterOrderNo.trim(),
+      coAnglerOrderNo: form.coAnglerOrderNo.trim(),
+    };
+
+    setSubmitting(true);
+    const created = await onAddEntry(entry);
+    setSubmitting(false);
+
+    if (created) {
+      setRecent(prev => [{ ...entry, id: created.id }, ...prev].slice(0, 10));
+      setForm({ ...EMPTY });
+      setErrors({});
+      setFeeAmount('');
+      setFeeLunker(false);
+      setFeeOption(false);
+      boaterContactIdRef.current  = null;
+      coAnglerContactIdRef.current = null;
+      setTimeout(() => boaterFirstRef.current?.focus(), 0);
+    }
   }
 
   async function openSignApplication(entry) {
@@ -566,6 +642,18 @@ export default function SignUpTab({ onAddEntry, onDeleteEntry, settings, entries
             )}
           </label>
 
+          {/* Order #s */}
+          <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
+            <div style={{ flex: 1 }}>
+              <label style={LABEL}>Boater Order # <span style={{ fontWeight: 400, opacity: 0.55, fontSize: 11, textTransform: 'none', letterSpacing: 0 }}>(optional)</span></label>
+              <input type="text" value={form.boaterOrderNo} placeholder="Online order #" onChange={e => set('boaterOrderNo', e.target.value)} style={FIELD} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label style={LABEL}>Co-Angler Order # <span style={{ fontWeight: 400, opacity: 0.55, fontSize: 11, textTransform: 'none', letterSpacing: 0 }}>(optional)</span></label>
+              <input type="text" value={form.coAnglerOrderNo} placeholder="Online order #" onChange={e => set('coAnglerOrderNo', e.target.value)} style={FIELD} />
+            </div>
+          </div>
+
           {/* Fee fields */}
           <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', alignItems: 'flex-end' }}>
             <div style={{ flex: '1 1 160px' }}>
@@ -574,13 +662,15 @@ export default function SignUpTab({ onAddEntry, onDeleteEntry, settings, entries
                 {!paperCopy && <span style={{ fontWeight: 400, opacity: 0.6, marginLeft: 4 }}>(optional — pre-fills digital app)</span>}
               </label>
               <input
-                type="number"
+                type="text"
                 inputMode="decimal"
                 value={feeAmount}
-                placeholder={paperCopy ? 'Required' : '0.00'}
-                min="0"
-                step="0.01"
+                placeholder={paperCopy ? 'Required' : '0.00 or 249+10+20'}
                 onChange={e => { setFeeAmount(e.target.value); if (errors.feeAmount) setErrors(p => ({ ...p, feeAmount: null })); }}
+                onBlur={e => {
+                  const result = evalMath(e.target.value);
+                  if (!isNaN(result) && e.target.value.trim()) setFeeAmount(parseFloat(result.toFixed(2)));
+                }}
                 style={{
                   ...FIELD,
                   borderColor: errors.feeAmount ? '#ff6b6b' : feeAmount ? 'rgba(139,180,225,0.5)' : undefined,
@@ -588,11 +678,11 @@ export default function SignUpTab({ onAddEntry, onDeleteEntry, settings, entries
                 }}
               />
               {errors.feeAmount && <div style={{ fontSize: 11, color: '#ff6b6b', marginTop: 3 }}>{errors.feeAmount}</div>}
-              {feeAmount > 0 && (
-                <div style={{ fontSize: 11, color: parseFloat(feeAmount) >= entryFee ? '#6fcf97' : '#f0ad4e', marginTop: 3 }}>
-                  {parseFloat(feeAmount) >= entryFee ? '✓ Paid in Full' : `Partial — min $${entryFee}`}
+              {feeAmount !== '' && (() => { const amt = parseFloat(evalMath(String(feeAmount))); return !isNaN(amt) && amt > 0 ? (
+                <div style={{ fontSize: 11, color: amt >= entryFee ? '#6fcf97' : '#f0ad4e', marginTop: 3 }}>
+                  {amt >= entryFee ? `✓ Paid in Full ($${amt.toFixed(2)})` : `Partial — min $${entryFee}`}
                 </div>
-              )}
+              ) : null; })()}
             </div>
             <div style={{ display: 'flex', gap: 16, paddingBottom: 4 }}>
               <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 14, fontWeight: 600, cursor: 'pointer', userSelect: 'none', color: 'var(--white)' }}>
@@ -657,6 +747,12 @@ export default function SignUpTab({ onAddEntry, onDeleteEntry, settings, entries
                     style={{ flex: 1, fontSize: 16, padding: '12px 0', opacity: (paperCopy && !paperPinUnlocked) ? 0.4 : 1 }}>
               {submitting ? 'Saving…' : paperCopy ? '+ Sign Up (Paper)' : '+ Sign Up'}
             </button>
+            {!paperCopy && (
+              <button type="button" className="btn btn-outline" onClick={handleSaveForLater} disabled={submitting}
+                      style={{ fontSize: 14, padding: '12px 14px', whiteSpace: 'nowrap' }}>
+                Save — Sign Later
+              </button>
+            )}
             <button type="button" className="btn btn-outline" onClick={handleClear}
                     style={{ padding: '12px 20px' }}>
               Clear
