@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { calcWeightedPayouts } from '../utils/calculations';
 import { exportCSV, importCSV } from '../utils/csv';
 import { evalMath } from '../utils/evalMath';
-import { fetchEventLog, clearEventLog, fetchQrCounts } from '../utils/api';
+import { fetchEventLog, clearEventLog, fetchQrCounts, fetchContacts } from '../utils/api';
 import { exportRosterPdf } from '../utils/exportRosterPdf';
 
 const PANEL = { background: 'var(--settings-panel-bg)', border: '1px solid rgba(139,180,225,0.2)', borderRadius: 10, padding: 20, marginBottom: 16 };
@@ -169,6 +169,22 @@ export default function SettingsTab({ settings, entries, isUnlocked, onUpdateSet
     const result = [...top, ...back];
     result[0] += totalPayout - result.reduce((s, v) => s + v, 0);
     syncPayouts(result);
+  }
+
+  async function handleEmailDump() {
+    const contacts = await fetchContacts().catch(() => []);
+    const withEmail = contacts.filter(c => c.email && c.email.trim());
+    if (!withEmail.length) { alert('No contacts with email addresses found.'); return; }
+    const csvEsc = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const rows = [
+      ['First Name', 'Last Name', 'Email', 'Phone'],
+      ...withEmail.map(c => [csvEsc(c.firstName), csvEsc(c.lastName), csvEsc(c.email), csvEsc(c.phone)]),
+    ];
+    const csv = rows.map(r => r.join(',')).join('\r\n');
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+    a.download = `contact-emails-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
   }
 
   function handleSavePreset() {
@@ -778,6 +794,7 @@ export default function SettingsTab({ settings, entries, isUnlocked, onUpdateSet
           <h3 style={H3}>Data Management</h3>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <button className="btn btn-primary" onClick={() => exportCSV(entries, payoutSettings)}>💾 Export CSV</button>
+            <button className="btn btn-outline" onClick={handleEmailDump}>📧 Email Dump</button>
             <button className="btn btn-outline" onClick={() => setShowSignUpLog(true)}>📝 Sign-Up Log</button>
             <button className="btn btn-outline" onClick={() => setShowCheckInLog(true)}>⚓ Check In Log</button>
             <button className="btn btn-outline" onClick={() => setShowOffWaterLog(true)}>🏁 Check Out Log</button>
