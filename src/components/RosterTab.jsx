@@ -608,7 +608,7 @@ export default function RosterTab({
               <col style={{ width: '58px' }} />
               <col style={{ width: '65px' }} /><col style={{ width: '65px' }} />
               <col style={{ width: '72px' }} />
-              <col style={{ width: '75px' }} /><col style={{ width: '75px' }} />
+              <col style={{ width: '130px' }} /><col style={{ width: '75px' }} />
             </colgroup>
             <thead>
               <tr>
@@ -644,10 +644,22 @@ export default function RosterTab({
                     </td>
                     <td style={{ textAlign: 'center' }} onClick={e => e.stopPropagation()}>
                       {row.appSigned === 1 || row.appSigned === '1' ? (
-                        <>
-                          <button className="btn btn-outline btn-sm" onClick={() => viewWaiverForEntry(row, settings, fetchContactsWithSignatures)}>App</button>
-                          {row.appSignedAt && <div style={{ fontSize: 10, color: '#4CAF50', marginTop: 2, whiteSpace: 'nowrap' }}>✓ {fmtSignedUp(row.appSignedAt)}</div>}
-                        </>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3 }}>
+                          <div style={{ display: 'flex', gap: 4 }}>
+                            <button className="btn btn-outline btn-sm" onClick={() => viewWaiverForEntry(row, settings, fetchContactsWithSignatures)}>App</button>
+                            {row.feeVerified === 0 && (
+                              <button
+                                className="btn btn-sm"
+                                onClick={() => onSignApp?.(row)}
+                                style={{ background: 'rgba(240,173,78,0.15)', border: '1px solid rgba(240,173,78,0.6)', color: '#f0ad4e', fontWeight: 700 }}
+                                title="Customer entered fee — verify and confirm"
+                              >
+                                $? Verify
+                              </button>
+                            )}
+                          </div>
+                          {row.appSignedAt && <div style={{ fontSize: 10, color: '#4CAF50', whiteSpace: 'nowrap' }}>✓ {fmtSignedUp(row.appSignedAt)}</div>}
+                        </div>
                       ) : (
                         <button className="btn btn-outline btn-sm" onClick={() => onSignApp?.(row)} style={{ opacity: 0.75 }}>Sign</button>
                       )}
