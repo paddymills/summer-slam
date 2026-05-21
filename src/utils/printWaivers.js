@@ -1,4 +1,4 @@
-const LEGAL_CLAUSES = [
+export const LEGAL_CLAUSES = [
   'In consideration of Susquehanna Fishing Tackle, Inc. allowing me to participate in this tournament, I acknowledge and agree as follows:',
   '<strong>1.</strong> I have read and understand the description of the tournament and the Official Rules of this tournament. I will obey all rules and understand that any violation may result in immediate disqualification without refund of my entry fee. I also understand that tournament officials may reject my application for any reason and in that event will refund my entry fee.',
   '<strong>2.</strong> I understand and acknowledge that competitive fishing is a dangerous sport, the risks of which include, though not exclusively, drowning, collisions in the water, and injuries from hooks and other fishing paraphernalia. I voluntarily assume responsibility for these risks, identified and not identified, and all risk of injury or death or damage to myself, or my property or to others, including spectators and their property, arising from my participation in the tournament.',
@@ -95,7 +95,7 @@ function waiverHTML(entry, boaterSig, coaSig, settings) {
     </div>`;
 }
 
-function openPrintWindow(title, bodyHTML, { autoPrint = true } = {}) {
+function openPrintWindow(title, bodyHTML, { autoPrint = true, extraCss = '' } = {}) {
   const html = `<!DOCTYPE html>
 <html>
 <head>
@@ -112,6 +112,7 @@ function openPrintWindow(title, bodyHTML, { autoPrint = true } = {}) {
     .print-bar .btn-close { background: rgba(255,255,255,0.15); color: #fff; }
     .print-bar span { color: rgba(255,255,255,0.8); font-size: 13px; flex: 1; }
     @media print { .print-bar { display: none !important; } }
+    ${extraCss}
   </style>
 </head>
 <body>
@@ -169,6 +170,97 @@ export async function viewWaiverForEntry(entry, settings, fetchContactsFn) {
   const contacts = await fetchContactsFn();
   const { boaterSig, coaSig } = contactsToSigs(entry, contacts);
   openPrintWindow(makeTitle(entry), waiverHTML(entry, boaterSig, coaSig, settings), { autoPrint: false });
+}
+
+// formData: optional { boaterFirst, boaterLast, boaterSuffix, boaterPhone, boaterEmail,
+//                      coAnglerFirst, coAnglerLast, coAnglerSuffix, coAnglerPhone, coAnglerEmail,
+//                      lunker, option }
+export function printBlankApplication(settings, formData = null) {
+  const year      = new Date().getFullYear();
+  const entryFee  = parseFloat(settings?.fees?.entryFee)  || 250;
+  const lunkerFee = parseFloat(settings?.fees?.lunkerFee) || 10;
+  const optFee    = parseFloat(settings?.fees?.optFee)    || 20;
+  const tDate     = settings?.tournamentDate
+    ? new Date(settings.tournamentDate + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+    : '';
+  const tLocation = settings?.tournamentLocation || '';
+  const header    = [tDate, tLocation].filter(Boolean).join(' · ');
+
+  const clauseP = LEGAL_CLAUSES.map(c =>
+    `<p style="font-size:9px;line-height:1.28;margin:0 0 3px;text-align:justify;color:#222;">${c}</p>`
+  ).join('');
+
+  const line = (val, w = '150px') => val
+    ? `<span style="display:inline-block;border-bottom:1px solid #333;min-width:${w};margin-left:3px;font-weight:600;color:#111;">&nbsp;${val}&nbsp;</span>`
+    : `<span style="display:inline-block;border-bottom:1px solid #333;width:${w};margin-left:3px;">&nbsp;</span>`;
+
+  const f = formData || {};
+  const boaterName  = [f.boaterFirst, f.boaterLast, f.boaterSuffix].filter(Boolean).join(' ');
+  const coaName     = [f.coAnglerFirst, f.coAnglerLast, f.coAnglerSuffix].filter(Boolean).join(' ');
+  const hasCoAngler = !!(f.coAnglerFirst || f.coAnglerLast);
+
+  const blankSigBlock = (label, number) => `
+    <div style="flex:1;min-width:0;">
+      <div style="font-size:10px;font-weight:700;margin-bottom:3px;color:#333;">
+        #${number} ${label} Signature
+        <span style="font-weight:400;color:#666;font-size:9px;">(Good through 12/31/${year})</span>
+      </div>
+      <div style="border:1px solid #aaa;border-radius:3px;background:#fafafa;min-height:52px;"></div>
+      <div style="font-size:9px;color:#555;margin-top:4px;">Date:${line('', '100px')}</div>
+    </div>`;
+
+  const html = `
+    <div class="waiver">
+      <h1 style="text-align:center;font-size:15px;font-weight:700;margin:0 0 2px;letter-spacing:.5px;">${year} SUMMER SLAM ENTRY FORM</h1>
+      ${header ? `<p style="text-align:center;font-size:11px;font-weight:400;margin:0 0 6px;color:#444;">${header}</p>` : ''}
+      <hr style="border:none;border-top:2px solid #111;margin:5px 0;" />
+
+      <p style="font-size:8.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin:0 0 3px;color:#333;">Entry Fees</p>
+      <div style="border:1px solid #999;border-radius:4px;padding:5px 10px;margin-bottom:6px;background:#fafafa;font-size:11px;">
+        Entry Fee: <strong>$${entryFee}</strong>
+        &nbsp;&nbsp;
+        Lunker: <strong>$${lunkerFee}</strong> <input type="checkbox" style="vertical-align:middle;" /> Yes
+        &nbsp;&nbsp;
+        Option: <strong>$${optFee}</strong> <input type="checkbox" style="vertical-align:middle;" /> Yes
+        &nbsp;&nbsp;&nbsp;
+        Buy-In Total:${line('', '120px')}
+      </div>
+
+      <p style="font-size:8.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin:0 0 3px;color:#333;">Anglers</p>
+      <table style="width:100%;border-collapse:collapse;font-size:11px;margin-bottom:6px;">
+        <tbody>
+          <tr style="border-bottom:1px solid #ddd;">
+            <td style="padding:3px 4px 3px 0;font-weight:700;white-space:nowrap;width:62px;">Boater</td>
+            <td style="padding:3px 4px;">Name:${line(boaterName, '130px')}</td>
+            <td style="padding:3px 4px;">Phone:${line(f.boaterPhone, '100px')}</td>
+            <td style="padding:3px 4px;font-size:10px;">Email:${line(f.boaterEmail, '120px')}</td>
+          </tr>
+          <tr>
+            <td style="padding:3px 4px 3px 0;font-weight:700;white-space:nowrap;">Co-Angler</td>
+            <td style="padding:3px 4px;">Name:${line(hasCoAngler ? coaName : '', '130px')}</td>
+            <td style="padding:3px 4px;">Phone:${line(hasCoAngler ? f.coAnglerPhone : '', '100px')}</td>
+            <td style="padding:3px 4px;font-size:10px;">Email:${line(hasCoAngler ? f.coAnglerEmail : '', '120px')}</td>
+          </tr>
+        </tbody>
+      </table>
+      <hr style="border:none;border-top:2px solid #111;margin:5px 0;" />
+
+      <p style="font-size:8.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin:0 0 4px;color:#333;">Participant Agreement, Release and Acknowledgment of Risk</p>
+      ${clauseP}
+
+      <div style="text-align:center;font-weight:700;font-size:9.5px;border:2px solid #111;padding:4px 10px;margin:6px 0 8px;">
+        THIS SIGNED WAIVER IS IN EFFECT FOR ANY SUSQUEHANNA FISHING TACKLE, INC. TOURNAMENT IN ${year}
+      </div>
+
+      <div style="display:flex;gap:16px;">
+        ${blankSigBlock('Boater', 1)}
+        ${blankSigBlock('Co-Angler', 2)}
+      </div>
+    </div>`;
+
+  openPrintWindow(`${year} Summer Slam — Entry Form`, html, {
+    extraCss: `@page { margin: 0.3in; size: letter portrait; } .waiver { padding: 8px 10px; }`,
+  });
 }
 
 export function printAllWaivers(signedEntries, contacts, settings) {

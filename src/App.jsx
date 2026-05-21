@@ -552,8 +552,8 @@ const saveSettingsMut   = useSaveSettings();
         entries={rankedEntries}
         settings={settingsWithTheme}
         activeTab={(() => {
-          const publicTabs = ['rules', 'offlimits', 'archive', 'roster', 'flights', 'leaderboard'];
-          const operatorTabs = ['checkin', 'boatcheck', 'signup'];
+          const publicTabs = ['rules', 'offlimits', 'archive', 'roster', 'flights', 'leaderboard', 'signup'];
+          const operatorTabs = ['checkin', 'boatcheck'];
           const adminTabs = ['weighin', 'contacts', 'settings'];
           if (publicTabs.includes(activeTab)) return activeTab;
           if (isOperator && operatorTabs.includes(activeTab)) return activeTab;
@@ -561,8 +561,8 @@ const saveSettingsMut   = useSaveSettings();
           return 'leaderboard';
         })()}
         onTabChange={tab => {
-          const publicTabs = ['rules', 'offlimits', 'archive', 'roster', 'flights', 'leaderboard'];
-          const operatorTabs = ['checkin', 'boatcheck', 'signup'];
+          const publicTabs = ['rules', 'offlimits', 'archive', 'roster', 'flights', 'leaderboard', 'signup'];
+          const operatorTabs = ['checkin', 'boatcheck'];
           const adminTabs = ['weighin', 'contacts', 'settings'];
           if (publicTabs.includes(tab) || (isOperator && operatorTabs.includes(tab)) || (isAdmin && adminTabs.includes(tab))) {
             setActiveTab(tab);
@@ -577,7 +577,7 @@ const saveSettingsMut   = useSaveSettings();
         onToggleMikeMode={() => setMikeMode(m => !m)}
         isAdmin={isAdmin}
         isOperator={isOperator}
-        onToggleLock={() => isOperator ? handleLock() : setShowUnlock(true)}
+        onToggleLock={() => accessLevel === 'admin' ? handleLock() : setShowUnlock(true)}
         buyInBlurred={buyInBlurred}
         onToggleBuyInBlur={handleToggleBuyInBlur}
       />
@@ -644,11 +644,12 @@ const saveSettingsMut   = useSaveSettings();
           <FlightsTab entries={rankedEntries} settings={settingsWithTheme} />
         </div>
 
+        <div style={{ display: activeTab === 'signup' ? 'contents' : 'none' }}>
+          <SignUpTab onAddEntry={handleSignUpEntry} onDeleteEntry={(id) => deleteEntryMut.mutate(id)} settings={settingsWithTheme} entries={rawEntries} onEntriesRefresh={() => entriesQuery.refetch()} isOperator={isOperator} />
+        </div>
+
         {everUnlocked && (
           <>
-            <div style={{ display: activeTab === 'signup' ? 'contents' : 'none' }}>
-              <SignUpTab onAddEntry={handleSignUpEntry} onDeleteEntry={(id) => deleteEntryMut.mutate(id)} settings={settingsWithTheme} entries={rawEntries} onEntriesRefresh={() => entriesQuery.refetch()} />
-            </div>
             <div style={{ display: activeTab === 'checkin' ? 'contents' : 'none' }}>
               <CheckInTab entries={rankedEntries} onSave={handleCheckInSave} />
             </div>
@@ -724,6 +725,7 @@ const saveSettingsMut   = useSaveSettings();
         <UnlockModal
           onUnlock={handleUnlock}
           onCancel={() => setShowUnlock(false)}
+          onLock={accessLevel === 'operator' ? () => { handleLock(); setShowUnlock(false); } : undefined}
         />
       )}
 

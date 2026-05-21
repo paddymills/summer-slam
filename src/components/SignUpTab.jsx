@@ -4,7 +4,7 @@ import EmailInput from './EmailInput';
 import WaiverModal from './WaiverModal';
 import { formatPhone } from '../utils/phone';
 import { fetchContactsWithSignatures, saveContactWaiver, lookupContactId } from '../utils/api';
-import { printAllWaivers, viewWaiverForEntry, contactsToSigs } from '../utils/printWaivers';
+import { printAllWaivers, viewWaiverForEntry, contactsToSigs, printBlankApplication, LEGAL_CLAUSES } from '../utils/printWaivers';
 
 const FIELD = {
   background: 'rgba(255,255,255,0.06)',
@@ -44,7 +44,136 @@ const EMPTY = {
   coAnglerFirst: '', coAnglerLast: '', coAnglerSuffix: '', coAnglerPhone: '', coAnglerEmail: '',
 };
 
-export default function SignUpTab({ onAddEntry, onDeleteEntry, settings, entries = [], onEntriesRefresh }) {
+function PublicSignUpView({ settings }) {
+  const [form, setForm] = useState({ ...EMPTY });
+
+  function set(field, val) { setForm(prev => ({ ...prev, [field]: val })); }
+
+  return (
+    <div className="tab-panel active">
+      <div className="tab-scroll">
+        <div style={{ maxWidth: 520, margin: '0 auto', paddingTop: 16 }}>
+          <div className="toolbar" style={{ marginBottom: 16, paddingLeft: 0, paddingRight: 0 }}>
+            <h2 style={{ color: 'var(--gold-light)', fontSize: 18, fontWeight: 800 }}>📝 Entry Form</h2>
+            <button
+              type="button"
+              className="btn btn-gold"
+              style={{ fontSize: 14 }}
+              onClick={() => printBlankApplication(settings, form)}
+            >
+              🖨 Print Application
+            </button>
+          </div>
+          <p style={{ fontSize: 13, color: 'var(--header-bg)', marginBottom: 20, lineHeight: 1.6 }}>
+            Fill in your information below, then tap <strong style={{ color: 'var(--white)' }}>Print Application</strong> to generate a paper form to sign and return to tournament staff.
+          </p>
+
+          {/* Legal text */}
+          <div style={{ marginBottom: 20, borderRadius: 8, border: '1px solid rgba(139,180,225,0.2)', background: 'rgba(255,255,255,0.03)', padding: '14px 16px' }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gold-light)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>
+              Participant Agreement, Release and Acknowledgment of Risk
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--header-bg)', lineHeight: 1.65, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {LEGAL_CLAUSES.map((clause, i) => (
+                <p key={i} style={{ margin: 0 }} dangerouslySetInnerHTML={{ __html: clause }} />
+              ))}
+            </div>
+            <div style={{ marginTop: 12, padding: '8px 12px', border: '2px solid rgba(139,180,225,0.4)', borderRadius: 6, fontSize: 11, fontWeight: 700, color: 'var(--header-bg)', textAlign: 'center', letterSpacing: 0.5 }}>
+              THIS SIGNED WAIVER IS IN EFFECT FOR ANY SUSQUEHANNA FISHING TACKLE, INC. TOURNAMENT IN {new Date().getFullYear()}
+            </div>
+          </div>
+
+          <form onSubmit={e => e.preventDefault()} style={{ display: 'flex', flexDirection: 'column', gap: 18 }} noValidate>
+
+            {/* Boater */}
+            <div>
+              <div style={SECTION}>Boater</div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 10 }}>
+                <div style={{ flex: '1 1 160px' }}>
+                  <label style={LABEL}>First Name</label>
+                  <input type="text" value={form.boaterFirst} placeholder="First" onChange={e => set('boaterFirst', e.target.value)} style={FIELD} />
+                </div>
+                <div style={{ flex: '1 1 160px' }}>
+                  <label style={LABEL}>Last Name</label>
+                  <input type="text" value={form.boaterLast} placeholder="Last" onChange={e => set('boaterLast', e.target.value)} style={FIELD} />
+                </div>
+                <div style={{ flex: '0 0 90px' }}>
+                  <label style={LABEL}>Suffix</label>
+                  <select value={form.boaterSuffix} onChange={e => set('boaterSuffix', e.target.value)} style={SUFFIX_STYLE}>
+                    {SUFFIX_OPTIONS.map(o => <option key={o} value={o}>{o || '—'}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div style={{ marginBottom: 10 }}>
+                <label style={LABEL}>Phone</label>
+                <input type="tel" value={form.boaterPhone} placeholder="555-123-4567" onChange={e => set('boaterPhone', e.target.value)} onBlur={e => set('boaterPhone', formatPhone(e.target.value))} style={FIELD} />
+              </div>
+              <div>
+                <label style={LABEL}>Email</label>
+                <EmailInput value={form.boaterEmail} onChange={v => set('boaterEmail', v)} style={FIELD} />
+              </div>
+            </div>
+
+            {/* Co-Angler */}
+            <div>
+              <div style={SECTION}>
+                Co-Angler{' '}
+                <span style={{ fontWeight: 400, opacity: 0.55, fontSize: 11, textTransform: 'none', letterSpacing: 0 }}>(optional)</span>
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 10 }}>
+                <div style={{ flex: '1 1 160px' }}>
+                  <label style={LABEL}>First Name</label>
+                  <input type="text" value={form.coAnglerFirst} placeholder="First" onChange={e => set('coAnglerFirst', e.target.value)} style={FIELD} />
+                </div>
+                <div style={{ flex: '1 1 160px' }}>
+                  <label style={LABEL}>Last Name</label>
+                  <input type="text" value={form.coAnglerLast} placeholder="Last" onChange={e => set('coAnglerLast', e.target.value)} style={FIELD} />
+                </div>
+                <div style={{ flex: '0 0 90px' }}>
+                  <label style={LABEL}>Suffix</label>
+                  <select value={form.coAnglerSuffix} onChange={e => set('coAnglerSuffix', e.target.value)} style={SUFFIX_STYLE}>
+                    {SUFFIX_OPTIONS.map(o => <option key={o} value={o}>{o || '—'}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div style={{ marginBottom: 10 }}>
+                <label style={LABEL}>Phone</label>
+                <input type="tel" value={form.coAnglerPhone} placeholder="555-123-4567" onChange={e => set('coAnglerPhone', e.target.value)} onBlur={e => set('coAnglerPhone', formatPhone(e.target.value))} style={FIELD} />
+              </div>
+              <div>
+                <label style={LABEL}>Email</label>
+                <EmailInput value={form.coAnglerEmail} onChange={v => set('coAnglerEmail', v)} style={FIELD} />
+              </div>
+            </div>
+
+            {/* Print button */}
+            <button
+              type="button"
+              className="btn btn-gold"
+              style={{ fontSize: 16, padding: '13px 0' }}
+              onClick={() => printBlankApplication(settings, form)}
+            >
+              🖨 Print Application
+            </button>
+
+            <button
+              type="button"
+              className="btn btn-outline"
+              style={{ fontSize: 14 }}
+              onClick={() => setForm({ ...EMPTY })}
+            >
+              Clear
+            </button>
+
+          </form>
+
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function SignUpTab({ onAddEntry, onDeleteEntry, settings, entries = [], onEntriesRefresh, isOperator = false }) {
   const entryFee = parseFloat(settings?.fees?.entryFee) || 250;
   const lunkerFee = parseFloat(settings?.fees?.lunkerFee) || 10;
   const optFee    = parseFloat(settings?.fees?.optFee)    || 20;
@@ -226,6 +355,8 @@ export default function SignUpTab({ onAddEntry, onDeleteEntry, settings, entries
     }
   }
 
+  if (!isOperator) return <PublicSignUpView settings={settings} />;
+
   const err = (field) => errors[field]
     ? <div style={{ fontSize: 11, color: '#ff6b6b', marginTop: 3 }}>{errors[field]}</div>
     : null;
@@ -281,6 +412,22 @@ export default function SignUpTab({ onAddEntry, onDeleteEntry, settings, entries
         )}
       </div>
       <div style={{ maxWidth: 520, margin: '0 auto', paddingTop: 16 }}>
+
+      {/* ── Legal text ── */}
+      <div style={{ marginBottom: 20, borderRadius: 8, border: '1px solid rgba(139,180,225,0.2)', background: 'rgba(255,255,255,0.03)', padding: '14px 16px' }}>
+        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--gold-light)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 10 }}>
+          Participant Agreement, Release and Acknowledgment of Risk
+        </div>
+        <div style={{ fontSize: 12, color: 'var(--header-bg)', lineHeight: 1.65, display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {LEGAL_CLAUSES.map((clause, i) => (
+            <p key={i} style={{ margin: 0 }} dangerouslySetInnerHTML={{ __html: clause }} />
+          ))}
+        </div>
+        <div style={{ marginTop: 12, padding: '8px 12px', border: '2px solid rgba(139,180,225,0.4)', borderRadius: 6, fontSize: 11, fontWeight: 700, color: 'var(--header-bg)', textAlign: 'center', letterSpacing: 0.5 }}>
+          THIS SIGNED WAIVER IS IN EFFECT FOR ANY SUSQUEHANNA FISHING TACKLE, INC. TOURNAMENT IN {new Date().getFullYear()}
+        </div>
+      </div>
+
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 18 }} noValidate>
 
         {/* ── Boater ── */}
