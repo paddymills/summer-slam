@@ -97,6 +97,7 @@ export default function RosterTab({
   const [lockedSortBy,   setLockedSortBy]   = useState('boaterFirst');
   const [lockedSortDesc, setLockedSortDesc] = useState(false);
   const [lockedBoatFilter, setLockedBoatFilter] = useState('');
+  const [lockedNameFilter, setLockedNameFilter] = useState('');
   const [opSortBy,   setOpSortBy]   = useState('boaterFirst');
   const [opSortDesc, setOpSortDesc] = useState(false);
   const [opFilter,   setOpFilter]   = useState('');
@@ -701,6 +702,11 @@ export default function RosterTab({
     const lockedQualified = entries.filter(e => (e.paid === 1 || e.paid === '1') && (e.appSigned === 1 || e.appSigned === '1'));
     const lockedSorted = [...lockedQualified]
       .filter(e => !lockedBoatFilter.trim() || String(e.boatNo || '') === lockedBoatFilter.trim())
+      .filter(e => {
+        const q = lockedNameFilter.trim().toLowerCase();
+        if (!q) return true;
+        return `${e.boaterFirst} ${e.boaterLast} ${e.coAnglerFirst} ${e.coAnglerLast}`.toLowerCase().includes(q);
+      })
       .sort((a, b) => {
         let va, vb;
         if (lockedSortBy === 'signedUpAt') {
@@ -744,14 +750,28 @@ export default function RosterTab({
             <a href="mailto:info@sfttackle.com" style={{ color: 'var(--gold-light)' }}>info@sfttackle.com</a>!
           </p>
         </div>
-        <div style={{ padding: '8px 16px', flexShrink: 0, borderBottom: '1px solid rgba(168,200,160,0.13)' }}>
+        <div style={{ padding: '8px 16px', flexShrink: 0, borderBottom: '1px solid rgba(168,200,160,0.13)', display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <input
+            type="search"
+            placeholder="Filter by name…"
+            value={lockedNameFilter}
+            onChange={e => setLockedNameFilter(e.target.value)}
+            style={{
+              flex: '1 1 160px', maxWidth: 260,
+              background: 'rgba(255,255,255,0.07)',
+              border: '1px solid rgba(139,180,225,0.28)',
+              borderRadius: 6, color: 'var(--white)',
+              fontSize: 14, padding: '6px 10px', outline: 'none',
+              boxSizing: 'border-box',
+            }}
+          />
           <input
             type="search"
             placeholder="Filter by boat #…"
             value={lockedBoatFilter}
             onChange={e => setLockedBoatFilter(e.target.value)}
             style={{
-              width: '100%', maxWidth: 220,
+              flex: '0 1 140px',
               background: 'rgba(255,255,255,0.07)',
               border: '1px solid rgba(139,180,225,0.28)',
               borderRadius: 6, color: 'var(--white)',
