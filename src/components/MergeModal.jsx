@@ -34,14 +34,24 @@ function EntryCard({ entry, isKeeper, onKeep }) {
           {[
             ['Boat #',   fmt(entry.boatNo)],
             ['Buy-In',   fmtMoney(entry.buyIn)],
-            ['Paid',     fmtBool(entry.paid)],
-            ['Signed',   fmtBool(entry.appSigned)],
-          ].map(([label, val]) => (
-            <tr key={label}>
-              <td style={{ color: 'var(--header-bg)', paddingBottom: 3, paddingRight: 12, whiteSpace: 'nowrap' }}>{label}</td>
-              <td style={{ color: 'var(--white)', fontWeight: 600 }}>{val}</td>
-            </tr>
-          ))}
+            ['Paid',     entry.paid === 1 || entry.paid === '1'],
+            ['Signed',   entry.appSigned === 1 || entry.appSigned === '1'],
+            ['Lunker',   entry.lunker === 1 || entry.lunker === '1'],
+            ['Option',   entry.option === 1 || entry.option === '1'],
+          ].map(([label, val]) => {
+            const isBool = typeof val === 'boolean';
+            return (
+              <tr key={label}>
+                <td style={{ color: 'var(--header-bg)', paddingBottom: 3, paddingRight: 12, whiteSpace: 'nowrap' }}>{label}</td>
+                <td style={{
+                  fontWeight: 600,
+                  color: isBool ? (val ? '#4CAF50' : '#ff9090') : 'var(--white)',
+                }}>
+                  {isBool ? (val ? 'YES' : 'NO') : val}
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
       <button
