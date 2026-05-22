@@ -542,7 +542,7 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
             <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'flex-end' }}>
               <div style={{ flex: '1 1 180px' }}>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 700, marginBottom: 4, color: '#333' }}>
-                  Buy In — Amount You're Paying ($)
+                  Buy-In — Amount You're Paying ($)
                   <span style={{ fontWeight: 400, color: '#666', marginLeft: 6, fontSize: 11 }}>Staff will verify</span>
                 </label>
                 <input
@@ -674,7 +674,7 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
             <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'flex-end' }}>
               <div style={{ flex: '1 1 180px' }}>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 700, marginBottom: 4, color: '#333' }}>
-                  Buy In — Amount Collected ($)
+                  Buy-In — Amount Collected ($)
                   <span style={{ fontWeight: 400, color: '#666', marginLeft: 6 }}>min ${entryFee} to mark Paid</span>
                 </label>
                 <input
@@ -783,7 +783,7 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
           In consideration of Susquehanna Fishing Tackle, Inc. allowing me to participate in this tournament, I acknowledge and agree as follows:
         </p>
         <p style={CLAUSE}>
-          <strong>1.</strong> I have read and understand the description of the tournament and the Official Rules of this tournament. I will obey all rules and understand that any violation may result in immediate disqualification without refund of my entry fee. I also understand that tournament officials may reject my application for any reason and in that event will refund my entry fee.
+          <strong>1.</strong> I have read and understood the description of the tournament and the Official Rules of this tournament. I will obey all rules and understand that any violation may result in immediate disqualification without refund of my entry fee. I also understand that tournament officials may reject my application for any reason and in that event will refund my entry fee.
         </p>
         <p style={CLAUSE}>
           <strong>2.</strong> I understand and acknowledge that competitive fishing is a dangerous sport, the risks of which include, though not exclusively, drowning, collisions in the water, and injuries from hooks and other fishing paraphernalia. I voluntarily assume responsibility for these risks, identified and not identified, and all risk of injury or death or damage to myself, or my property or to others, including spectators and their property, arising from my participation in the tournament.

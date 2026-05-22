@@ -2,7 +2,7 @@ import { jsPDF } from 'jspdf';
 
 export const LEGAL_CLAUSES = [
   'In consideration of Susquehanna Fishing Tackle, Inc. allowing me to participate in this tournament, I acknowledge and agree as follows:',
-  '<strong>1.</strong> I have read and understand the description of the tournament and the Official Rules of this tournament. I will obey all rules and understand that any violation may result in immediate disqualification without refund of my entry fee. I also understand that tournament officials may reject my application for any reason and in that event will refund my entry fee.',
+  '<strong>1.</strong> I have read and understood the description of the tournament and the Official Rules of this tournament. I will obey all rules and understand that any violation may result in immediate disqualification without refund of my entry fee. I also understand that tournament officials may reject my application for any reason and in that event will refund my entry fee.',
   '<strong>2.</strong> I understand and acknowledge that competitive fishing is a dangerous sport, the risks of which include, though not exclusively, drowning, collisions in the water, and injuries from hooks and other fishing paraphernalia. I voluntarily assume responsibility for these risks, identified and not identified, and all risk of injury or death or damage to myself, or my property or to others, including spectators and their property, arising from my participation in the tournament.',
   '<strong>3.</strong> I hereby release, discharge, and agree to hold harmless and indemnify Susquehanna Fishing Tackle, Inc., its shareholders, officers, directors, agents and employees, the host, sponsors and tournament officials, and its partners, agents, or employees, and all other persons or entities associated with the tournament for any and all injury, death, illness or disease, and other damage or loss to property suffered by myself or others. In signing this document I acknowledge and agree that if anyone is hurt or property damaged while I am engaged in this event, I will have no right to make a claim or file a lawsuit against Susquehanna Fishing Tackle, Inc., its shareholders, officers, directors, agents or employees, the host, sponsors, officials, and all other persons or entities associated with the tournament, even if they or any of them negligently caused the bodily injury or property damage.',
   '<strong>4.</strong> Any suit brought against me by Susquehanna Fishing Tackle, Inc. as a result of my participation in this tournament will be brought in state or county court in Lancaster County, PA where the principal office of Susquehanna Fishing Tackle, Inc. is located. Should it become necessary for Susquehanna Fishing Tackle, Inc. or someone on its behalf, to incur attorney\'s fees and costs to enforce this agreement, or any portion thereof, I agree to pay the reasonable costs and attorney\'s fees thereby expended, or for which a liability is incurred.',
@@ -86,7 +86,7 @@ function waiverHTML(entry, boaterSig, coaSig, settings, templateMode = false) {
 
       <p style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin:0 0 5px;color:#333;">Entry Fees</p>
       <div style="border:1.5px solid #2e7d32;border-radius:6px;padding:6px 10px;margin-bottom:10px;background:#f1f8e9;font-size:12px;">
-        <strong>Buy In:</strong> $${buyInAmt} ${paidLabel}${extras ? `&nbsp;&nbsp;·&nbsp;&nbsp;${extras}` : ''}
+        <strong>Buy-In:</strong> $${buyInAmt} ${paidLabel}${extras ? `&nbsp;&nbsp;·&nbsp;&nbsp;${extras}` : ''}
         ${orderParts.length ? `<div style="margin-top:4px;font-size:11px;color:#555;">${orderParts.join('&nbsp;&nbsp;·&nbsp;&nbsp;')}</div>` : ''}
       </div>
 
@@ -395,10 +395,10 @@ export async function shareSignedWaiver(entry, boaterSigUrl, coaSigUrl, settings
   sectionLabel('Entry Fees');
   sf('bold', 8.5);
   let x = M;
-  doc.text(`Buy In: $${buyAmt} — ${paidLabel}`, x, y);
+  doc.text(`Buy-In: $${buyAmt} — ${paidLabel}`, x, y);
   const feeParts = [entry.lunker && `Lunker ($${lunkerFee})`, entry.option && `Option ($${optFee})`].filter(Boolean);
   if (feeParts.length) {
-    x = M + doc.getTextWidth(`Buy In: $${buyAmt} — ${paidLabel}`) + 5;
+    x = M + doc.getTextWidth(`Buy-In: $${buyAmt} — ${paidLabel}`) + 5;
     sf('normal', 8.5); doc.text(feeParts.join('  ·  '), x, y);
   }
   y += 6;
