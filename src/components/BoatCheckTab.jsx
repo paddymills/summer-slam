@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 
 export default function BoatCheckTab({ entries, settings, isUnlocked, onToggleOffWater, onReset }) {
   const offWater = settings.offWater || {};
-  const boatedEntries = entries.filter(e => e.boatNo !== '' && e.boatNo != null);
+  const boatedEntries = entries.filter(e => e.boatNo !== '' && e.boatNo != null && e.checkedInAt);
   const offWaterCount = boatedEntries.filter(e => offWater[e.id]).length;
   const allClear = boatedEntries.length > 0 && offWaterCount === boatedEntries.length;
 
@@ -17,14 +17,14 @@ export default function BoatCheckTab({ entries, settings, isUnlocked, onToggleOf
   }
 
   const previewEntry = boatInput.trim()
-    ? entries.find(en => String(en.boatNo) === boatInput.trim()) ?? null
+    ? entries.find(en => String(en.boatNo) === boatInput.trim() && en.checkedInAt) ?? null
     : null;
 
   function handleQuickCheckOut(e) {
     e.preventDefault();
     const val = boatInput.trim();
     if (!val) return;
-    const match = entries.find(en => String(en.boatNo) === val);
+    const match = entries.find(en => String(en.boatNo) === val && en.checkedInAt);
     const boaterName = match ? `${match.boaterFirst} ${match.boaterLast}`.trim() : '';
     if (!match) {
       setFlashMsg({ type: 'error', text: `Boat #${val} not found` });
@@ -39,7 +39,7 @@ export default function BoatCheckTab({ entries, settings, isUnlocked, onToggleOf
   }
 
   const sorted = useMemo(() =>
-    [...entries].filter(e => e.boatNo !== '' && e.boatNo != null).sort((a, b) => {
+    [...entries].filter(e => e.boatNo !== '' && e.boatNo != null && e.checkedInAt).sort((a, b) => {
       const an = parseInt(a.boatNo);
       const bn = parseInt(b.boatNo);
       const aValid = !isNaN(an) && a.boatNo !== '' && a.boatNo != null;
