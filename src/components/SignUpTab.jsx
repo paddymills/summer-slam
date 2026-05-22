@@ -1125,19 +1125,33 @@ export default function SignUpTab({ onAddEntry, onDeleteEntry, onEdit, settings,
                       / {[r.coAnglerFirst, r.coAnglerLast, r.coAnglerSuffix].filter(Boolean).join(' ')}
                     </span>
                   )}
-                  <button
-                    type="button"
-                    disabled={openingWaiver === r.id}
-                    onClick={() => openSignApplication(r)}
-                    style={{
-                      padding: '4px 12px', fontSize: 11, cursor: openingWaiver === r.id ? 'not-allowed' : 'pointer',
-                      background: '#1a5276', color: '#fff', border: 'none',
-                      borderRadius: 5, fontWeight: 600, whiteSpace: 'nowrap', marginLeft: 8,
-                      opacity: openingWaiver === r.id ? 0.6 : 1,
-                    }}
-                  >
-                    {openingWaiver === r.id ? 'Loading…' : 'Sign Application'}
-                  </button>
+                  <div style={{ display: 'flex', gap: 6, marginLeft: 8, flexShrink: 0 }}>
+                    <button
+                      type="button"
+                      disabled={openingWaiver === r.id}
+                      onClick={() => openSignApplication(r)}
+                      style={{
+                        padding: '4px 12px', fontSize: 11, cursor: openingWaiver === r.id ? 'not-allowed' : 'pointer',
+                        background: '#1a5276', color: '#fff', border: 'none',
+                        borderRadius: 5, fontWeight: 600, whiteSpace: 'nowrap',
+                        opacity: openingWaiver === r.id ? 0.6 : 1,
+                      }}
+                    >
+                      {openingWaiver === r.id ? 'Loading…' : 'Sign Application'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { if (window.confirm(`Delete pending application for ${[r.boaterFirst, r.boaterLast].filter(Boolean).join(' ')}?`)) onDeleteEntry?.(r.id); }}
+                      style={{
+                        padding: '4px 10px', fontSize: 11, cursor: 'pointer',
+                        background: 'rgba(255,107,107,0.15)', color: '#ff9090',
+                        border: '1px solid rgba(255,107,107,0.4)',
+                        borderRadius: 5, fontWeight: 600, whiteSpace: 'nowrap',
+                      }}
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
