@@ -65,7 +65,9 @@ function rosterFilterFn(row, _columnId, filterValue) {
   if (regFilter === 'unregistered' && isPaid && isSigned)    return false;
   if (!text) return true;
   const q = text.toLowerCase();
-  return `${r.boaterFirst} ${r.boaterLast} ${r.boaterSuffix} ${r.coAnglerFirst} ${r.coAnglerLast} ${r.coAnglerSuffix} ${r.boatNo}`.toLowerCase().includes(q);
+  const isNumericOnly = /^\d+$/.test(q);
+  const boatMatch = isNumericOnly ? String(r.boatNo || '') === q : String(r.boatNo || '').toLowerCase().includes(q);
+  return boatMatch || `${r.boaterFirst} ${r.boaterLast} ${r.boaterSuffix} ${r.coAnglerFirst} ${r.coAnglerLast} ${r.coAnglerSuffix}`.toLowerCase().includes(q);
 }
 rosterFilterFn.autoRemove = v => !v?.text && (!v?.regFilter || v.regFilter === 'all');
 
@@ -576,9 +578,12 @@ export default function RosterTab({
     }
 
     const q = opFilter.toLowerCase();
-    const opFiltered = entries.filter(e =>
-      !q || `${e.boaterFirst} ${e.boaterLast} ${e.coAnglerFirst} ${e.coAnglerLast} ${e.boatNo}`.toLowerCase().includes(q)
-    );
+    const isNumericOnly = /^\d+$/.test(q);
+    const opFiltered = entries.filter(e => {
+      if (!q) return true;
+      const boatMatch = isNumericOnly ? String(e.boatNo || '') === q : String(e.boatNo || '').toLowerCase().includes(q);
+      return boatMatch || `${e.boaterFirst} ${e.boaterLast} ${e.coAnglerFirst} ${e.coAnglerLast}`.toLowerCase().includes(q);
+    });
     const opSorted = [...opFiltered].sort((a, b) => {
       let va, vb;
       if (opSortBy === 'boatNo') {
