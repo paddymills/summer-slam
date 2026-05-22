@@ -55,19 +55,19 @@ export default function LeaderboardTab({ entries, settings }) {
   function norm(first, last) {
     return `${(first || '').trim().toLowerCase()} ${(last || '').trim().toLowerCase()}`;
   }
-  function getPastWinYears(row) {
+  function getPastWinData(row) {
     const b = norm(row.boaterFirst, row.boaterLast);
     const c = norm(row.coAnglerFirst, row.coAnglerLast);
     const currentYear = new Date().getFullYear();
-    return pastWinners
-      .filter(w => {
-        if (Number(w.year) >= currentYear) return false;
-        const wb = norm(w.boaterFirst, w.boaterLast);
-        const wc = norm(w.coAnglerFirst, w.coAnglerLast);
-        return (wb === b && wc === c) || (wb === c && wc === b);
-      })
-      .map(w => w.year)
-      .sort();
+    const boaterYears = new Set(), coYears = new Set();
+    pastWinners.forEach(w => {
+      if (Number(w.year) >= currentYear) return;
+      const wb = norm(w.boaterFirst, w.boaterLast);
+      const wc = norm(w.coAnglerFirst, w.coAnglerLast);
+      if (b && (wb === b || wc === b)) boaterYears.add(String(w.year));
+      if (c && (wb === c || wc === c)) coYears.add(String(w.year));
+    });
+    return { boaterYears: [...boaterYears].sort(), coYears: [...coYears].sort() };
   }
 
   const cwEntry    = settings.currentlyWeighing;
@@ -256,10 +256,11 @@ export default function LeaderboardTab({ entries, settings }) {
           const isLunker2 = lunkerRow2 && row.id === lunkerRow2.id;
           const isOpt1    = option1Row && row.id === option1Row.id;
           const isOpt2    = option2Row && row.id === option2Row.id;
-          const winYears  = getPastWinYears(row);
-          const hasBadge  = isLunker1 || isLunker2 || isOpt1 || isOpt2 || winYears.length > 0;
+          const winData   = getPastWinData(row);
+          const hasBadge  = isLunker1 || isLunker2 || isOpt1 || isOpt2;
 
           const BADGE = { display: 'inline-flex', alignItems: 'center', gap: 4, borderRadius: 6, padding: '4px 10px', fontSize: 13, fontWeight: 700, letterSpacing: 0.3 };
+          const CHAMP_TAG = { marginLeft: 5, fontSize: 10, fontWeight: 800, color: '#ffd700', background: 'rgba(255,215,0,0.15)', border: '1px solid rgba(255,215,0,0.5)', borderRadius: 3, padding: '1px 5px', verticalAlign: 'middle', letterSpacing: 0.3, whiteSpace: 'nowrap' };
 
           return (
             <div key={row.id} className={`lb-card ${cardClass}${idx >= topN ? ' lb-print-only' : ''}`}>
@@ -273,7 +274,13 @@ export default function LeaderboardTab({ entries, settings }) {
                   {[row.boaterFirst, row.boaterLast, row.boaterSuffix].filter(Boolean).join(' ')}
                   {row.lunker === 1 && <span style={{ marginLeft: 7, fontSize: 10, fontWeight: 800, color: '#ffb450', background: 'rgba(255,180,80,0.22)', border: '1px solid rgba(255,180,80,0.55)', borderRadius: 3, padding: '1px 5px', verticalAlign: 'middle', letterSpacing: 0.3 }}>L</span>}
                   {row.option === 1 && <span style={{ marginLeft: 4, fontSize: 10, fontWeight: 800, color: '#78c8ff', background: 'rgba(120,200,255,0.22)', border: '1px solid rgba(120,200,255,0.55)', borderRadius: 3, padding: '1px 5px', verticalAlign: 'middle', letterSpacing: 0.3 }}>O</span>}
-                  {coName !== '—' && <span className="lb-co">, {coName}</span>}
+                  {winData.boaterYears.map(yr => <span key={yr} style={CHAMP_TAG}>🏆 {yr}</span>)}
+                  {coName !== '—' && (
+                    <span className="lb-co">
+                      , {coName}
+                      {winData.coYears.map(yr => <span key={yr} style={CHAMP_TAG}>🏆 {yr}</span>)}
+                    </span>
+                  )}
                 </div>
                 {hasBadge && (
                   <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
@@ -281,9 +288,6 @@ export default function LeaderboardTab({ entries, settings }) {
                     {isLunker2 && <span style={{ ...BADGE, background: '#444', border: '1px solid #aaa', color: '#fff' }}>🎯 Lunker 2nd</span>}
                     {isOpt1    && <span style={{ ...BADGE, background: '#0a5a9e', border: '1px solid #78c8ff', color: '#fff' }}>⚡ Option 1</span>}
                     {isOpt2    && <span style={{ ...BADGE, background: '#1e6e9e', border: '1px solid #a8dcff', color: '#fff' }}>⚡ Option 2</span>}
-                    {winYears.map(yr => (
-                      <span key={yr} style={{ ...BADGE, background: '#3d2a00', border: '1px solid #ffd700', color: '#ffd700' }}>🏆 {yr}</span>
-                    ))}
                   </div>
                 )}
               </div>
