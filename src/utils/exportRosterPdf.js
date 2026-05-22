@@ -163,7 +163,7 @@ export function exportRosterPdf(entries, settings, contacts = [], winners = []) 
   function champBadge(first, last) {
     const years = champMap.get(normName(first, last));
     if (!years?.length) return '';
-    return ` <span style="background:#000;color:#fff;font-size:8px;font-weight:bold;padding:1px 5px;border-radius:2px;margin-left:5px">${years.sort().join(', ')} CHAMP</span>`;
+    return ` <span style="background:#000;color:#fff;font-size:8px;font-weight:bold;padding:1px 5px;border-radius:2px;margin-left:5px;white-space:nowrap;display:inline-block">${years.sort().join(', ')} CHAMP</span>`;
   }
 
   // --- Catch performance ---
