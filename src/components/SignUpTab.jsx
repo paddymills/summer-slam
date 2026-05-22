@@ -336,7 +336,83 @@ function PublicSignUpView({ settings, entries = [], onEntriesRefresh }) {
   );
 }
 
-export default function SignUpTab({ onAddEntry, onDeleteEntry, settings, entries = [], onEntriesRefresh, isOperator = false }) {
+function FindAndEdit({ entries, onEdit }) {
+  const [query, setQuery] = useState('');
+  const norm = s => (s || '').toLowerCase().trim();
+  const matches = query.trim().length >= 2
+    ? entries.filter(e => {
+        const q = norm(query);
+        return norm(`${e.boaterFirst} ${e.boaterLast}`).includes(q)
+          || norm(`${e.coAnglerFirst} ${e.coAnglerLast}`).includes(q)
+          || norm(e.boaterLast).startsWith(q)
+          || norm(e.coAnglerLast).startsWith(q);
+      })
+    : [];
+
+  return (
+    <div style={{ marginTop: 36, borderTop: '1px solid rgba(139,180,225,0.2)', paddingTop: 24 }}>
+      <h3 style={{ color: 'var(--gold-light)', fontSize: 16, fontWeight: 700, marginBottom: 8 }}>
+        Find &amp; Edit Existing Entry
+      </h3>
+      <p style={{ fontSize: 13, color: 'var(--header-bg)', marginBottom: 14, lineHeight: 1.6 }}>
+        Search for an existing entry to edit it — e.g., to add a co-angler, update fees, or correct information.
+      </p>
+      <input
+        type="text"
+        value={query}
+        onChange={e => setQuery(e.target.value)}
+        placeholder="Search by last name…"
+        style={{ ...FIELD, marginBottom: 10 }}
+      />
+      {query.trim().length >= 2 && matches.length === 0 && (
+        <p style={{ fontSize: 12, color: 'var(--header-bg)', textAlign: 'center', padding: '12px 0' }}>
+          No entries found.
+        </p>
+      )}
+      {matches.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {matches.map(e => {
+            const boaterName = [e.boaterFirst, e.boaterLast, e.boaterSuffix].filter(Boolean).join(' ');
+            const coaName    = [e.coAnglerFirst, e.coAnglerLast, e.coAnglerSuffix].filter(Boolean).join(' ');
+            const isPaid     = e.paid === 1 || e.paid === '1';
+            const isSigned   = e.appSigned === 1 || e.appSigned === '1';
+            return (
+              <div key={e.id} style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                background: 'rgba(255,255,255,0.05)', borderRadius: 8,
+                border: '1px solid rgba(139,180,225,0.2)',
+                padding: '10px 14px', gap: 12,
+              }}>
+                <div>
+                  <div style={{ fontWeight: 700, color: 'var(--white)', fontSize: 14 }}>{boaterName}</div>
+                  {coaName
+                    ? <div style={{ fontSize: 12, color: 'var(--header-bg)', marginTop: 2 }}>/ {coaName}</div>
+                    : <div style={{ fontSize: 12, color: '#f0ad4e', marginTop: 2 }}>No co-angler</div>
+                  }
+                  <div style={{ fontSize: 11, color: 'var(--header-bg)', marginTop: 3, display: 'flex', gap: 8 }}>
+                    {e.boatNo && <span>Boat #{e.boatNo}</span>}
+                    <span style={{ color: isSigned ? '#6fcf97' : '#f0ad4e' }}>{isSigned ? '✓ Signed' : 'Not signed'}</span>
+                    <span style={{ color: isPaid ? '#6fcf97' : '#f0ad4e' }}>{isPaid ? '✓ Paid' : 'Not paid'}</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  style={{ fontSize: 13, padding: '8px 16px', whiteSpace: 'nowrap' }}
+                  onClick={() => { onEdit(e); setQuery(''); }}
+                >
+                  Edit
+                </button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function SignUpTab({ onAddEntry, onDeleteEntry, onEdit, settings, entries = [], onEntriesRefresh, isOperator = false }) {
   const entryFee = parseFloat(settings?.fees?.entryFee) || 250;
   const lunkerFee = parseFloat(settings?.fees?.lunkerFee) || 10;
   const optFee    = parseFloat(settings?.fees?.optFee)    || 20;
@@ -1068,6 +1144,8 @@ export default function SignUpTab({ onAddEntry, onDeleteEntry, settings, entries
           </div>
         );
       })()}
+      {/* ── Find & Edit Existing Entry ── */}
+      {onEdit && <FindAndEdit entries={entries} onEdit={onEdit} />}
       </div>
       </div>
 

@@ -678,7 +678,7 @@ const saveSettingsMut   = useSaveSettings();
         </div>
 
         <div style={{ display: activeTab === 'signup' ? 'contents' : 'none' }}>
-          <SignUpTab onAddEntry={handleSignUpEntry} onDeleteEntry={(id) => deleteEntryMut.mutate(id)} settings={settingsWithTheme} entries={rawEntries} onEntriesRefresh={() => entriesQuery.refetch()} isOperator={isOperator} />
+          <SignUpTab onAddEntry={handleSignUpEntry} onDeleteEntry={(id) => deleteEntryMut.mutate(id)} onEdit={setEditingEntry} settings={settingsWithTheme} entries={rawEntries} onEntriesRefresh={() => entriesQuery.refetch()} isOperator={isOperator} />
         </div>
 
         {everUnlocked && (
