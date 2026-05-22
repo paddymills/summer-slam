@@ -78,13 +78,17 @@ export default function CheckInTab({ entries, onSave, settings }) {
     const q = query.trim().toLowerCase();
     if (!q) return [];
     const digits = q.replace(/\D/g, '');
+    const isNumericOnly = /^\d+$/.test(q);
     return entries.filter(e => {
       const name = `${e.boaterFirst} ${e.boaterLast} ${e.coAnglerFirst} ${e.coAnglerLast}`.toLowerCase();
       const bPhone = (e.boaterPhone || '').replace(/\D/g, '');
       const cPhone = (e.coAnglerPhone || '').replace(/\D/g, '');
+      const boatMatch = isNumericOnly
+        ? String(e.boatNo || '') === q
+        : String(e.boatNo || '').toLowerCase().includes(q);
       return name.includes(q)
-        || String(e.boatNo || '').includes(q)
-        || (digits && (bPhone.includes(digits) || cPhone.includes(digits)));
+        || boatMatch
+        || (digits.length >= 7 && (bPhone.includes(digits) || cPhone.includes(digits)));
     });
   }, [entries, query]);
 
