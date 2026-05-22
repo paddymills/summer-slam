@@ -66,61 +66,24 @@ function rowName(r) {
   return co ? `${boater} / ${co}` : boater;
 }
 
-function pieSlicePath(cx, cy, r, a0, a1) {
-  const x1 = cx + r * Math.cos(a0), y1 = cy + r * Math.sin(a0);
-  const x2 = cx + r * Math.cos(a1), y2 = cy + r * Math.sin(a1);
-  return `M ${cx},${cy} L ${x1.toFixed(1)},${y1.toFixed(1)} A ${r},${r} 0 ${a1 - a0 > Math.PI ? 1 : 0},1 ${x2.toFixed(1)},${y2.toFixed(1)} Z`;
-}
-
-// Solid fills only — no url() patterns, reliable in all print contexts
-const PIE_FILLS = ['#111', '#777', '#ccc'];
-
-function buildPieSvg(slices) {
-  const total = slices.reduce((s, sl) => s + sl.count, 0);
-  if (total === 0) return '';
-  const W = 560, H = 240, cx = 120, cy = 120, r = 105;
-  let angle = -Math.PI / 2;
-  const paths = slices.filter(sl => sl.count > 0).map((sl, i) => {
-    const sweep = (sl.count / total) * 2 * Math.PI;
-    const d = pieSlicePath(cx, cy, r, angle, angle + sweep);
-    angle += sweep;
-    return `<path d="${d}" fill="${PIE_FILLS[i]}" stroke="#fff" stroke-width="2.5"/>`;
-  }).join('');
-
-  const legendY = 60;
-  const legend = slices.map((sl, i) => {
-    const pct = total > 0 ? ((sl.count / total) * 100).toFixed(1) : '0.0';
-    return `<g transform="translate(0,${i * 30})">
-      <rect x="0" y="0" width="16" height="16" fill="${PIE_FILLS[i]}" stroke="#000" stroke-width="0.5"/>
-      <text x="24" y="12" font-family="Arial,sans-serif" font-size="12" fill="#000" font-weight="bold">${sl.count}</text>
-      <text x="24" y="26" font-family="Arial,sans-serif" font-size="10" fill="#555">${sl.label} (${pct}%)</text>
-    </g>`;
-  }).join('');
-
-  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="display:block;max-width:100%">
-    ${paths}
-    <g transform="translate(268,${legendY})">${legend}</g>
-  </svg>`;
-}
-
-function buildBarSvg(rows) {
-  if (!rows.length) return '';
-  const vals = rows.map(r => r._isDQ ? 0 : (parseFloat(r._effectiveWeight ?? r.totalWeight) || 0));
-  const maxW = Math.max(...vals, 0.01);
-  const W = 680, leftPad = 90, rightPad = 60, barH = 20, gap = 6;
-  const H = rows.length * (barH + gap) + 20;
+function buildHistogramSvg(buckets) {
+  if (!buckets.length) return '<p style="color:#888;font-size:11px;font-style:italic;margin-top:6px">No weigh-in data recorded.</p>';
+  const maxCount = Math.max(...buckets.map(b => b.count), 1);
+  const W = 620, leftPad = 130, rightPad = 90, barH = 19, gap = 5;
+  const H = buckets.length * (barH + gap) + 20;
   const barArea = W - leftPad - rightPad;
 
-  const bars = rows.map((r, i) => {
-    const wt = vals[i];
-    const bw = (wt / maxW) * barArea;
-    const y  = i * (barH + gap) + 10;
-    const lbl = r.boatNo ? `Boat #${r.boatNo}` : ([r.boaterFirst, r.boaterLast, r.boaterSuffix].filter(Boolean).join(' ').slice(0, 12) || '—');
-    const val = r._isDQ ? 'DQ' : `${wt.toFixed(2)} lbs`;
+  const bars = buckets.map((b, i) => {
+    const bw = b.count > 0 ? Math.max((b.count / maxCount) * barArea, 4) : 0;
+    const y = i * (barH + gap) + 10;
+    const isSkunked = b.label.startsWith('Skunked');
+    const fill = isSkunked ? '#bbb' : '#222';
+    const countLabel = b.count === 1 ? '1 boat' : `${b.count} boats`;
     return `
-      <text x="${leftPad - 6}" y="${y + barH * 0.72}" text-anchor="end" font-family="Arial,sans-serif" font-size="10" fill="#000">${lbl}</text>
-      <rect x="${leftPad}" y="${y}" width="${Math.max(bw, 1).toFixed(1)}" height="${barH}" fill="${r._isDQ ? '#bbb' : '#222'}"/>
-      <text x="${leftPad + bw + 5}" y="${y + barH * 0.72}" font-family="Arial,sans-serif" font-size="10" fill="#444">${val}</text>`;
+      <text x="${leftPad - 6}" y="${y + barH * 0.73}" text-anchor="end" font-family="Arial,sans-serif" font-size="11" fill="#000">${b.label}</text>
+      ${b.count > 0 ? `<rect x="${leftPad}" y="${y}" width="${bw.toFixed(1)}" height="${barH}" fill="${fill}"/>` : `<line x1="${leftPad}" y1="${y + barH / 2}" x2="${leftPad + 6}" y2="${y + barH / 2}" stroke="#ddd" stroke-width="1"/>`}
+      <text x="${leftPad + bw + 5}" y="${y + barH * 0.73}" font-family="Arial,sans-serif" font-size="11" fill="#444" font-weight="${b.count > 0 ? 'bold' : 'normal'}">${b.count > 0 ? countLabel : '0'}</text>
+    `;
   }).join('');
 
   return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="display:block;max-width:100%;margin-top:6px">
@@ -139,7 +102,7 @@ function sectionHead(title) {
   return `<div style="background:#111;color:#fff;padding:6px 12px;font-size:9px;font-weight:bold;text-transform:uppercase;letter-spacing:2px;margin:22px 0 10px">${title}</div>`;
 }
 
-export function exportRosterPdf(entries, settings) {
+export function exportRosterPdf(entries, settings, contacts = []) {
   const now           = new Date();
   const tDate         = settings.tournamentDate ? new Date(settings.tournamentDate + 'T12:00:00') : null;
   const year          = tDate ? tDate.getFullYear() : now.getFullYear();
@@ -148,8 +111,6 @@ export function exportRosterPdf(entries, settings) {
     : null;
 
   const registered    = entries.filter(e => isOn(e.paid) && isOn(e.appSigned));
-  const paidUnsigned  = entries.filter(e => isOn(e.paid) && !isOn(e.appSigned));
-  const unpaid        = entries.filter(e => !isOn(e.paid));
   const checkedIn     = entries.filter(e => e.boatNo);
   const weighed       = entries.filter(e => e.boatNo && parseFloat(e.totalWeight) > 0);
   const hasWeightData = weighed.length > 0;
@@ -167,8 +128,42 @@ export function exportRosterPdf(entries, settings) {
   const totalFish      = weighed.reduce((s, e) => s + (parseInt(e.numFish)       || 0), 0);
   const totalDeadFish  = entries.reduce((s, e) => s + (parseInt(e.deadFish)  || 0), 0);
   const totalShortFish = entries.reduce((s, e) => s + (parseInt(e.shortFish) || 0), 0);
-  const deadPenaltyLbs  = totalDeadFish  * (parseFloat(settings.penalties?.deadFishPenalty)  || 0.5);
-  const shortPenaltyLbs = totalShortFish * (parseFloat(settings.penalties?.shortFishPenalty) || 1.0);
+
+  // --- Returning vs new anglers (estimated from contacts DB) ---
+  function normName(first, last) {
+    return `${(first || '').trim().toLowerCase()} ${(last || '').trim().toLowerCase()}`.trim();
+  }
+  const contactNameSet = new Set(contacts.map(c => normName(c.firstName || c.first_name, c.lastName || c.last_name)).filter(Boolean));
+  let returningCount = 0, newCount = 0;
+  registered.forEach(e => {
+    const n = normName(e.boaterFirst, e.boaterLast);
+    if (n) { contactNameSet.has(n) ? returningCount++ : newCount++; }
+  });
+
+  // --- Catch performance ---
+  const maxFishLimit   = parseInt(settings.penalties?.maxFish) || 5;
+  const dqCount        = checkedIn.filter(e => e._isDQ).length;
+  const weighedWithFish = checkedIn.filter(e => !e._isDQ && parseFloat(e.totalWeight) > 0);
+  const skunkedCount   = checkedIn.filter(e => !e._isDQ && !(parseFloat(e.totalWeight) > 0)).length;
+  const limitTeams     = weighedWithFish.filter(e => (parseInt(e.numFish) || 0) >= maxFishLimit).length;
+  const avgFishRaw     = weighedWithFish.length > 0
+    ? weighedWithFish.reduce((s, e) => s + (parseInt(e.numFish) || 0), 0) / weighedWithFish.length
+    : null;
+
+  // Weight distribution histogram (1-lb buckets based on effective bag weight)
+  const catchHistogramBuckets = [];
+  if (weighedWithFish.length > 0) {
+    const effectiveWeights = weighedWithFish.map(e => parseFloat(e._effectiveWeight ?? e.totalWeight) || 0);
+    const maxW    = Math.max(...effectiveWeights);
+    const topFloor = Math.floor(maxW);
+    for (let lo = topFloor; lo >= 0; lo--) {
+      const isTop = lo === topFloor;
+      const count = effectiveWeights.filter(w => isTop ? w >= lo : (w >= lo && w < lo + 1)).length;
+      if (count > 0) catchHistogramBuckets.push({ label: isTop ? `${lo}+ lbs` : `${lo}–${lo + 1} lbs`, count });
+    }
+  }
+  if (skunkedCount > 0) catchHistogramBuckets.push({ label: 'Skunked / No Fish', count: skunkedCount });
+  const histogramSvg = buildHistogramSvg(catchHistogramBuckets);
 
   // --- Side pot winners ---
   const lunkerEligible = entries.filter(e => e.lunker === 1 && e.boatNo && parseFloat(e.lunkerWeight) > 0);
@@ -192,17 +187,13 @@ export function exportRosterPdf(entries, settings) {
   // --- Timing computations ---
   const flights = (settings.flights || []).slice().sort((a, b) => (parseInt(a.boatStart) || 0) - (parseInt(b.boatStart) || 0));
 
-  // Check-in window
   const ciTimes = entries.map(e => parseTs(e.checkedInAt)).filter(Boolean);
   const ciFirst = ciTimes.length ? new Date(Math.min(...ciTimes)) : null;
   const ciLast  = ciTimes.length ? new Date(Math.max(...ciTimes)) : null;
   const ciWindowMs = ciFirst && ciLast ? ciLast - ciFirst : null;
 
-  // Average weight per boat
   const avgWeight = weighed.length > 0 ? (totalWeight / weighed.length) : null;
 
-  // Time on water per entry: offWaterAt minus that entry's flight launchTime
-  // Only include boats that were assigned a number (checked in) and returned off water
   const waterDurations = entries
     .map(e => {
       if (!e.boatNo) return null;
@@ -236,15 +227,7 @@ export function exportRosterPdf(entries, settings) {
     })
     .slice(0, numWinners);
 
-  const pieSvg = buildPieSvg([
-    { label: 'Registered (Paid + Signed)', count: registered.length   },
-    { label: 'Paid / Not Yet Signed',      count: paidUnsigned.length },
-    { label: 'Not Paid',                   count: unpaid.length       },
-  ]);
-
-  const barSvg = hasWeightData ? buildBarSvg(standings.slice(0, numWinners)) : '';
-
-  // Stats cells
+  // Stats grid
   const preStats = [
     statCell(entries.length,      'Total Entries'),
     statCell(registered.length,   'Registered Teams'),
@@ -255,6 +238,10 @@ export function exportRosterPdf(entries, settings) {
     statCell(`$${optionPot.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'Option Pot'),
     statCell(`$${option1Payout}`, `Option 1 Payout (${Math.round(option1Pct * 100)}%)`),
     statCell(`$${option2Payout}`, `Option 2 Payout (${Math.round((1 - option1Pct) * 100)}%)`),
+    ...(contactNameSet.size > 0 ? [
+      statCell(returningCount, 'Returning Anglers*'),
+      statCell(newCount,       'First-Time Anglers*'),
+    ] : []),
   ];
   const postStats = hasWeightData ? [
     statCell(weighed.length,          'Boats Weighed'),
@@ -283,7 +270,7 @@ export function exportRosterPdf(entries, settings) {
     statRows.push(`<tr>${chunk.join('')}</tr>`);
   }
 
-  // Activity log rows — all entries with at least one timestamp, sorted by boat #
+  // Activity log
   const logRows = [...entries]
     .filter(e => e.checkedInAt || e.offWaterAt || e.weighedAt || e.signedUpAt)
     .sort((a, b) => {
@@ -331,7 +318,7 @@ export function exportRosterPdf(entries, settings) {
     return rows;
   }).join('');
 
-  // Roster table rows
+  // Roster table
   const TH = `style="background:#111;color:#fff;padding:7px 8px;text-align:left;font-size:9px;text-transform:uppercase;letter-spacing:0.8px;font-weight:bold"`;
   const THC = `style="background:#111;color:#fff;padding:7px 8px;text-align:center;font-size:9px;text-transform:uppercase;letter-spacing:0.8px;font-weight:bold"`;
 
@@ -418,26 +405,21 @@ export function exportRosterPdf(entries, settings) {
   <table style="width:100%;border-collapse:collapse">
     ${statRows.join('')}
   </table>
+  ${contactNameSet.size > 0 ? `<div style="font-size:9px;color:#999;margin-top:4px">* Returning/First-Time estimates based on contacts database at time of report.</div>` : ''}
 
-  <!-- Registration Breakdown -->
-  ${sectionHead('Registration Breakdown')}
-  ${pieSvg}
-
-  <!-- Weight Distribution -->
-  ${hasWeightData ? sectionHead(`Weight Distribution — Top ${Math.min(15, standings.length)} Boats`) + barSvg : ''}
-
-  <!-- Roster -->
-  ${sectionHead(`Registered Teams — ${rosterRows.length}`)}
-  <table style="width:100%;border-collapse:collapse;font-size:11px">
-    <thead><tr>
-      <th ${THC} style="background:#111;color:#fff;padding:7px 8px;text-align:center;font-size:9px;text-transform:uppercase;letter-spacing:0.8px;font-weight:bold;width:36px">#</th>
-      <th ${THC} style="background:#111;color:#fff;padding:7px 8px;text-align:center;font-size:9px;text-transform:uppercase;letter-spacing:0.8px;font-weight:bold;width:64px">Boat #</th>
-      <th ${TH}>Boater</th>
-      <th ${TH}>Co-Angler</th>
-      <th ${THC} style="background:#111;color:#fff;padding:7px 8px;text-align:center;font-size:9px;text-transform:uppercase;letter-spacing:0.8px;font-weight:bold;width:72px">Checked In</th>
-    </tr></thead>
-    <tbody>${rosterTableRows}</tbody>
+  <!-- Catch Performance -->
+  ${hasWeightData ? sectionHead('Catch Performance') : ''}
+  ${hasWeightData ? `
+  <table style="width:100%;border-collapse:collapse;margin-bottom:14px">
+    <tr>
+      ${statCell(`${limitTeams} of ${weighedWithFish.length}`, `Teams at Limit (${maxFishLimit} fish)`)}
+      ${statCell(avgFishRaw != null ? avgFishRaw.toFixed(1) : '—', 'Avg Fish / Weighed Team')}
+      ${statCell(skunkedCount, 'Zeroed Out')}
+      ${statCell(dqCount > 0 ? String(dqCount) : '—', 'Disqualified')}
+    </tr>
   </table>
+  <div style="font-size:9px;font-weight:bold;text-transform:uppercase;letter-spacing:0.5px;color:#444;margin-bottom:4px">Bag Weight Distribution</div>
+  ${histogramSvg}` : ''}
 
   <!-- Standings -->
   ${hasWeightData ? `
@@ -518,6 +500,19 @@ export function exportRosterPdf(entries, settings) {
     </tr></thead>
     <tbody>${activityTableRows}</tbody>
   </table>` : ''}
+
+  <!-- Registered Teams (full roster — end of report) -->
+  ${sectionHead(`Registered Teams — ${rosterRows.length}`)}
+  <table style="width:100%;border-collapse:collapse;font-size:11px">
+    <thead><tr>
+      <th ${THC} style="background:#111;color:#fff;padding:7px 8px;text-align:center;font-size:9px;text-transform:uppercase;letter-spacing:0.8px;font-weight:bold;width:36px">#</th>
+      <th ${THC} style="background:#111;color:#fff;padding:7px 8px;text-align:center;font-size:9px;text-transform:uppercase;letter-spacing:0.8px;font-weight:bold;width:64px">Boat #</th>
+      <th ${TH}>Boater</th>
+      <th ${TH}>Co-Angler</th>
+      <th ${THC} style="background:#111;color:#fff;padding:7px 8px;text-align:center;font-size:9px;text-transform:uppercase;letter-spacing:0.8px;font-weight:bold;width:72px">Checked In</th>
+    </tr></thead>
+    <tbody>${rosterTableRows}</tbody>
+  </table>
 
   <!-- Footer -->
   <div style="margin-top:28px;padding-top:10px;border-top:1px solid #ccc;font-size:9px;color:#999;text-align:center">

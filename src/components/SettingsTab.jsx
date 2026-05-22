@@ -794,7 +794,10 @@ export default function SettingsTab({ settings, entries, isUnlocked, onUpdateSet
             <button className="btn btn-outline" onClick={() => setShowCheckInLog(true)}>⚓ Check In Log</button>
             <button className="btn btn-outline" onClick={() => setShowOffWaterLog(true)}>🏁 Check Out Log</button>
             <button className="btn btn-outline" onClick={() => setShowLog(true)}>📋 Weigh-In Log</button>
-            {isUnlocked && <button className="btn btn-outline" onClick={() => exportRosterPdf(entries, settings)}>🖨️ Export PDF Report</button>}
+            {isUnlocked && <button className="btn btn-outline" onClick={async () => {
+              const contacts = await fetchContacts().catch(() => []);
+              exportRosterPdf(entries, settings, contacts);
+            }}>🖨️ Export PDF Report</button>}
             {isUnlocked && (
               <label className="btn btn-outline" style={{ cursor: 'pointer' }}>
                 📂 Import CSV
