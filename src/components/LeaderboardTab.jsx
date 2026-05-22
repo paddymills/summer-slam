@@ -11,7 +11,7 @@ export default function LeaderboardTab({ entries, settings }) {
   const totalWeight = lbEntries.reduce((s, e) => s + (parseFloat(e.totalWeight) || 0), 0).toFixed(2);
 
 
-  const lunkerRows = entries.filter(r => r.lunker === 1 && r.boatNo && parseFloat(r.lunkerWeight) > 0);
+  const lunkerRows = entries.filter(r => r.lunker === 1 && r.boatNo && r.checkedInAt && parseFloat(r.lunkerWeight) > 0);
   const lunkerRow = lunkerRows.length
     ? lunkerRows.reduce((best, r) => parseFloat(r.lunkerWeight) > parseFloat(best.lunkerWeight) ? r : best)
     : null;
@@ -38,8 +38,8 @@ export default function LeaderboardTab({ entries, settings }) {
   const option1Payout = (optionPot * option1Pct).toFixed(2);
   const option2Payout = (optionPot * (1 - option1Pct)).toFixed(2);
 
-  const checkedInCount = entries.filter(e => e.boatNo).length;
-  const boatsWeighed   = entries.filter(e => e.boatNo && parseFloat(e.totalWeight) > 0).length;
+  const checkedInCount = entries.filter(e => e.boatNo && e.checkedInAt).length;
+  const boatsWeighed   = entries.filter(e => e.boatNo && e.checkedInAt && parseFloat(e.totalWeight) > 0).length;
 
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
