@@ -3,7 +3,7 @@ import { fetchArchiveYears, fetchArchive } from '../utils/api';
 import { exportHTML } from '../utils/exportHtml';
 import { viewArchivedWaiver } from '../utils/printWaivers';
 
-export default function ArchiveTab({ isUnlocked, rosterCount, onLoadArchive, settings }) {
+export default function ArchiveTab({ isUnlocked, rosterCount, onLoadArchive, settings, isAdmin }) {
   const [years, setYears]       = useState([]);
   const [activeYear, setActiveYear] = useState(null);
   const [entries, setEntries]   = useState([]);
@@ -28,7 +28,7 @@ export default function ArchiveTab({ isUnlocked, rosterCount, onLoadArchive, set
       .then(setEntries)
       .catch(() => setError(`Failed to load ${activeYear} archive`))
       .finally(() => setLoadingEntries(false));
-  }, [activeYear]);
+  }, [activeYear, isAdmin]);
 
   if (loading) {
     return (
@@ -135,6 +135,7 @@ export default function ArchiveTab({ isUnlocked, rosterCount, onLoadArchive, set
                   <col style={{ width: 96 }} />
                   <col style={{ width: 64 }} />
                   <col style={{ width: 110 }} />
+                  {isAdmin && <col style={{ width: 80 }} />}
                   <col style={{ width: 80 }} />
                 </colgroup>
                 <thead>
@@ -148,6 +149,7 @@ export default function ArchiveTab({ isUnlocked, rosterCount, onLoadArchive, set
                     <th style={{ textAlign: 'right' }}>Lunker (lbs)</th>
                     <th style={{ textAlign: 'center' }}># Fish</th>
                     <th style={{ textAlign: 'right' }}>Total Wt (lbs)</th>
+                    {isAdmin && <th style={{ textAlign: 'right' }}>Buy-In</th>}
                     <th style={{ textAlign: 'center' }}>Waiver</th>
                   </tr>
                 </thead>
@@ -180,6 +182,11 @@ export default function ArchiveTab({ isUnlocked, rosterCount, onLoadArchive, set
                             )}
                           </span>
                         </td>
+                        {isAdmin && (
+                          <td style={{ textAlign: 'right', padding: '8px 12px' }}>
+                            {row.buyIn > 0 ? `$${Number(row.buyIn).toFixed(2)}` : '—'}
+                          </td>
+                        )}
                         <td style={{ textAlign: 'center', padding: '6px 8px' }}>
                           {hasSig ? (
                             <button

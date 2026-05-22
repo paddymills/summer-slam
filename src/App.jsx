@@ -668,6 +668,7 @@ const saveSettingsMut   = useSaveSettings();
         <div style={{ display: activeTab === 'archive' ? 'contents' : 'none' }}>
           <ArchiveTab
             isUnlocked={isAdmin}
+            isAdmin={isAdmin}
             rosterCount={rawEntries.length}
             onLoadArchive={handleLoadArchive}
             settings={settingsWithTheme}
