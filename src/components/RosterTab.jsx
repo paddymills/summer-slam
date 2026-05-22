@@ -615,13 +615,14 @@ export default function RosterTab({
           </span>
         </div>
         <div className="table-wrapper">
-          <table style={{ tableLayout: 'fixed', minWidth: 860 }}>
+          <table style={{ tableLayout: 'fixed', minWidth: 930 }}>
             <colgroup>
               <col style={{ width: '115px' }} /><col style={{ width: '115px' }} />
               <col style={{ width: '110px' }} /><col style={{ width: '110px' }} />
               <col style={{ width: '58px' }} />
               <col style={{ width: '65px' }} /><col style={{ width: '65px' }} />
               <col style={{ width: '72px' }} />
+              <col style={{ width: '70px' }} />
               <col style={{ width: '130px' }} /><col style={{ width: '75px' }} />
             </colgroup>
             <thead>
@@ -634,6 +635,7 @@ export default function RosterTab({
                 <th style={{ textAlign: 'center' }}>Lunker</th>
                 <th style={{ textAlign: 'center' }}>Option</th>
                 <th style={{ textAlign: 'right' }}>Buy-In</th>
+                <th style={{ textAlign: 'center' }}>Off Water</th>
                 <th style={{ textAlign: 'center' }}>App</th>
                 <th style={{ textAlign: 'center' }}>Edit</th>
               </tr>
@@ -655,6 +657,11 @@ export default function RosterTab({
                     <td style={{ textAlign: 'center' }}><StatusCell val={row.option} /></td>
                     <td style={{ textAlign: 'right', fontWeight: 600 }}>
                       {parseFloat(row.buyIn) > 0 ? `$${parseFloat(row.buyIn).toFixed(2)}` : '—'}
+                    </td>
+                    <td style={{ textAlign: 'center' }}>
+                      {offWater[row.id]
+                        ? <span style={{ color: '#78c8ff', fontWeight: 700, fontSize: 16 }}>✓</span>
+                        : <span style={{ color: 'var(--header-bg)' }}>—</span>}
                     </td>
                     <td style={{ textAlign: 'center' }} onClick={e => e.stopPropagation()}>
                       {row.appSigned === 1 || row.appSigned === '1' ? (
@@ -685,7 +692,7 @@ export default function RosterTab({
                 );
               })}
               {opSorted.length === 0 && (
-                <tr><td colSpan={10} style={{ textAlign: 'center', color: 'var(--header-bg)', padding: 40 }}>No entries found.</td></tr>
+                <tr><td colSpan={11} style={{ textAlign: 'center', color: 'var(--header-bg)', padding: 40 }}>No entries found.</td></tr>
               )}
             </tbody>
           </table>
