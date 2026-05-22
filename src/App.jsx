@@ -540,9 +540,9 @@ const saveSettingsMut   = useSaveSettings();
     }
     try {
       const payload = archivedEntries.map(e => ({
-        boaterFirst:   e.boaterFirst,   boaterLast:    e.boaterLast,
+        boaterFirst:   e.boaterFirst,   boaterLast:    e.boaterLast,   boaterSuffix:   e.boaterSuffix   ?? '',
         boaterPhone:   e.boaterPhone,   boaterEmail:   e.boaterEmail,
-        coAnglerFirst: e.coAnglerFirst, coAnglerLast:  e.coAnglerLast,
+        coAnglerFirst: e.coAnglerFirst, coAnglerLast:  e.coAnglerLast, coAnglerSuffix: e.coAnglerSuffix ?? '',
         coAnglerPhone: e.coAnglerPhone, coAnglerEmail: e.coAnglerEmail,
         boatNo:        e.boatNo,
         numFish:       e.numFish,
