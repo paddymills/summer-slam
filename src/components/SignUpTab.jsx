@@ -1177,8 +1177,7 @@ export default function SignUpTab({ onAddEntry, onDeleteEntry, onEdit, settings,
               ));
               onEntriesRefresh?.();
             } else if (!pendingWaiver.prefillSigs) {
-              // Fresh sign-up cancelled — delete the entry so it doesn't linger on the roster
-              onDeleteEntry?.(pendingWaiver.entry.id);
+              // Fresh sign-up cancelled — move to Pending Applications instead of deleting
               setRecent(prev => prev.filter(r => r.id !== pendingWaiver.entry.id));
               onEntriesRefresh?.();
             }
