@@ -50,7 +50,7 @@ header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px 20px;
+  padding: 12px max(20px, env(safe-area-inset-right, 0px)) 12px max(20px, env(safe-area-inset-left, 0px));
 }
 
 
@@ -73,7 +73,7 @@ header {
 .stats-bar {
   display: flex;
   justify-content: flex-start;
-  padding: 6px 20px 8px;
+  padding: 6px max(20px, env(safe-area-inset-right, 0px)) 8px max(20px, env(safe-area-inset-left, 0px));
   overflow-x: auto;
   overflow-y: hidden;
   -webkit-overflow-scrolling: touch;
@@ -126,7 +126,7 @@ header {
   display: flex;
   flex-wrap: nowrap;
   gap: 2px;
-  padding: 0 20px;
+  padding: 0 max(20px, env(safe-area-inset-right, 0px)) 0 max(20px, env(safe-area-inset-left, 0px));
   background: transparent;
   overflow-x: auto;
   scrollbar-width: none;
@@ -152,7 +152,7 @@ header {
 .nav-tab.active { color: var(--gold-light); border-bottom-color: var(--gold); }
 
 /* ── MAIN CONTENT ── */
-main { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 0 20px 16px; overflow: hidden; }
+main { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 0 max(20px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(20px, env(safe-area-inset-left, 0px)); overflow: hidden; }
 
 .tab-panel { display: none; }
 .tab-panel.active { display: flex; flex-direction: column; flex: 1; min-height: 0; }
@@ -171,8 +171,8 @@ main { flex: 1; min-height: 0; display: flex; flex-direction: column; padding: 0
 .toolbar {
   display: flex;
   gap: 8px;
-  margin: 0 -20px 14px;
-  padding: 12px 20px;
+  margin: 0 calc(-1 * max(20px, env(safe-area-inset-right, 0px))) 14px calc(-1 * max(20px, env(safe-area-inset-left, 0px)));
+  padding: 12px max(20px, env(safe-area-inset-right, 0px)) 12px max(20px, env(safe-area-inset-left, 0px));
   flex-wrap: wrap;
   align-items: center;
   position: -webkit-sticky;
@@ -752,10 +752,10 @@ tbody td.td-name { white-space: nowrap; text-overflow: ellipsis; }
 
   /* Nav tabs: scroll horizontally, never wrap */
   .nav-tabs-wrap::after { display: block; }
-  .nav-tabs { padding: 0 12px; }
+  .nav-tabs { padding: 0 max(12px, env(safe-area-inset-right, 0px)) 0 max(12px, env(safe-area-inset-left, 0px)); }
   .nav-tab { white-space: nowrap; padding: 10px 14px; }
 
-  main { padding: 12px 10px; }
+  main { padding: 12px max(10px, env(safe-area-inset-right, 0px)) max(16px, env(safe-area-inset-bottom, 0px)) max(10px, env(safe-area-inset-left, 0px)); }
 }
 
 @media (max-width: 700px) {
@@ -775,7 +775,7 @@ tbody td.td-name { white-space: nowrap; text-overflow: ellipsis; }
 
 @media (max-width: 600px) {
   /* Header: compact */
-  .header-top { padding: 8px 12px; gap: 8px; }
+  .header-top { padding: 8px max(12px, env(safe-area-inset-right, 0px)) 8px max(12px, env(safe-area-inset-left, 0px)); gap: 8px; }
   header, body.light header { background-position: center top !important; }
   .logo-text h1 { font-size: 17px; letter-spacing: 1px; }
   .logo-text p { display: none; }
@@ -863,11 +863,11 @@ tbody td.td-name { white-space: nowrap; text-overflow: ellipsis; }
 /* ── LANDSCAPE / SHORT VIEWPORT ── */
 @media (max-height: 500px) {
   .stats-bar { display: none; }
-  .header-top { padding: 4px 12px; }
+  .header-top { padding: 4px max(12px, env(safe-area-inset-right, 0px)) 4px max(12px, env(safe-area-inset-left, 0px)); }
   .logo-text h1 { font-size: 14px; letter-spacing: 1px; }
   .nav-tab { padding: 6px 14px; min-height: 36px; }
   .table-wrapper { max-height: max(160px, calc(100dvh - 120px)); }
-  .toolbar { margin-bottom: 8px; padding: 8px 20px; }
+  .toolbar { margin-bottom: 8px; padding: 8px max(20px, env(safe-area-inset-right, 0px)) 8px max(20px, env(safe-area-inset-left, 0px)); }
 }
 
 /* Leaderboard watermark — transparent bg PNG, plain opacity works on all themes */
