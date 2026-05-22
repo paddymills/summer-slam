@@ -30,13 +30,14 @@ export default function ContactSuggest({ value, placeholder, onChange, onSelect,
   const [suggestions, setSuggestions] = useState([]);
   const [open, setOpen] = useState(false);
   const [active, setActive] = useState(-1);
+  const [hasFocus, setHasFocus] = useState(false);
   const timer = useRef(null);
   const wrapRef = useRef(null);
   const justSelected = useRef(false);
 
   useEffect(() => {
     if (justSelected.current) { justSelected.current = false; return; }
-    if (value.length < 3) { setSuggestions([]); setOpen(false); return; }
+    if (!hasFocus || value.length < 3) { setSuggestions([]); setOpen(false); return; }
     clearTimeout(timer.current);
     timer.current = setTimeout(async () => {
       const results = await searchContacts(value);
@@ -45,7 +46,7 @@ export default function ContactSuggest({ value, placeholder, onChange, onSelect,
       setActive(-1);
     }, 280);
     return () => clearTimeout(timer.current);
-  }, [value]);
+  }, [value, hasFocus]);
 
   useEffect(() => {
     function close(e) { if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false); }
@@ -70,6 +71,7 @@ export default function ContactSuggest({ value, placeholder, onChange, onSelect,
   }
 
   function handleBlur(e) {
+    setHasFocus(false);
     setTimeout(() => { setOpen(false); setActive(-1); }, 150);
     if (onBlur) onBlur(e);
   }
@@ -83,6 +85,7 @@ export default function ContactSuggest({ value, placeholder, onChange, onSelect,
         placeholder={placeholder}
         onChange={e => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
+        onFocus={() => setHasFocus(true)}
         onBlur={handleBlur}
         autoComplete="off"
         {...inputProps}
