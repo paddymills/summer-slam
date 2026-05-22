@@ -18,6 +18,7 @@ import ConfirmActionModal from './components/ConfirmActionModal';
 import Toast from './components/Toast';
 import { verifyPassword, storePassword, storeLevel, clearPassword, isPasswordStored, revalidatePassword, archiveEntries, fetchContactsWithSignatures } from './utils/api';
 import WaiverModal from './components/WaiverModal';
+import MergeModal from './components/MergeModal';
 import { contactsToSigs } from './utils/printWaivers';
 import { calcRanks } from './utils/calculations';
 import { useEntries, useCreateEntry, useUpdateEntry, useDeleteEntry, useClearWeighLog, useClearSignUpLog, useClearCheckInLog, useClearCheckOutLog, useClearAllEntries, useCreateEntriesBulk, useDrawBoats } from './hooks/useEntries';
@@ -70,6 +71,7 @@ export default function App() {
   const [showUnlock, setShowUnlock]     = useState(false);
   const [buyInBlurred, setBuyInBlurred] = useState(() => localStorage.getItem('ss_buyin_blur') !== 'false');
   const [confirmAction, setConfirmAction] = useState(null);
+  const [mergePair, setMergePair]         = useState(null); // { entryA, entryB }
 
   const showToast = useCallback((message, type = 'success') => {
     setToasts(prev => [...prev, { message, type, id: Date.now() + Math.random() }]);
@@ -435,6 +437,51 @@ const saveSettingsMut   = useSaveSettings();
     });
   }
 
+  function handleOpenMerge(entry) {
+    const norm  = s => (s || '').toLowerCase().trim();
+    const normP = s => (s || '').replace(/\D/g, '');
+    const partner = rawEntries.find(other => {
+      if (other.id === entry.id) return false;
+      const slots1 = [
+        [entry.boaterFirst,   entry.boaterLast,   entry.boaterPhone],
+        [entry.coAnglerFirst, entry.coAnglerLast, entry.coAnglerPhone],
+      ].filter(([f, l]) => f || l);
+      const slots2 = [
+        [other.boaterFirst,   other.boaterLast,   other.boaterPhone],
+        [other.coAnglerFirst, other.coAnglerLast, other.coAnglerPhone],
+      ].filter(([f, l]) => f || l);
+      for (const [f1, l1, p1] of slots1) {
+        for (const [f2, l2, p2] of slots2) {
+          const nameMatch  = norm(f1) === norm(f2) && norm(l1) === norm(l2);
+          const ph1 = normP(p1), ph2 = normP(p2);
+          const phoneMatch = ph1.length >= 10 && ph1 === ph2;
+          if (nameMatch || phoneMatch) return true;
+        }
+      }
+      return false;
+    });
+    if (!partner) { showToast('Could not find duplicate partner', 'error'); return; }
+    setMergePair({ entryA: entry, entryB: partner });
+  }
+
+  function handleMerge(keeper, other, updates) {
+    setMergePair(null);
+    setConfirmAction({
+      label: `merge and delete entry for ${other.boaterFirst} ${other.boaterLast}`,
+      action: async () => {
+        try {
+          if (Object.keys(updates).length > 0) {
+            await updateEntryMut.mutateAsync({ id: keeper.id, data: { ...keeper, ...updates } });
+          }
+          await deleteEntryMut.mutateAsync(other.id);
+          showToast('Entries merged successfully', 'success');
+        } catch {
+          showToast('Merge failed', 'error');
+        }
+      },
+    });
+  }
+
   function handleVoidSignature(entry) {
     setConfirmAction({
       label: `void the signed application for ${entry.boaterFirst} ${entry.boaterLast}`,
@@ -667,6 +714,7 @@ const saveSettingsMut   = useSaveSettings();
             onSignApp={handleOpenSignApp}
             onDrawBoats={handleDrawBoats}
             onVoidSignature={handleVoidSignature}
+            onOpenMerge={handleOpenMerge}
           />
         </div>
         <div style={{ display: activeTab === 'leaderboard' ? 'contents' : 'none' }}>
@@ -781,6 +829,15 @@ const saveSettingsMut   = useSaveSettings();
           label={confirmAction.label}
           onConfirm={() => { confirmAction.action(); setConfirmAction(null); }}
           onCancel={() => setConfirmAction(null)}
+        />
+      )}
+
+      {mergePair && (
+        <MergeModal
+          entryA={mergePair.entryA}
+          entryB={mergePair.entryB}
+          onMerge={handleMerge}
+          onCancel={() => setMergePair(null)}
         />
       )}
 

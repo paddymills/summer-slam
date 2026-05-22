@@ -84,7 +84,7 @@ export default function RosterTab({
   entries, settings, isUnlocked, isOperator, buyInBlurred,
   onEdit, onAdd, onDelete, onClearAll, onImport,
   onToggleOffWater, onToggleField, onUpdateInlineField,
-  onClearDeductions, onArchive, onSignApp, onDrawBoats, onVoidSignature,
+  onClearDeductions, onArchive, onSignApp, onDrawBoats, onVoidSignature, onOpenMerge,
 }) {
   const entryFee = parseFloat(settings.fees?.entryFee) || 249;
   const offWater = settings.offWater || {};
@@ -263,7 +263,13 @@ export default function RosterTab({
                 : <span style={{ color: '#ffb450', marginRight: 4 }}>⚠️</span>
             )}
             {r.boaterFirst}
-            {duplicateEntryIds.has(r.id) && <span title="Duplicate angler" style={{ marginLeft: 4, color: '#ffb450', fontWeight: 700 }}>!</span>}
+            {duplicateEntryIds.has(r.id) && (
+              <span
+                title="Duplicate angler — click to merge"
+                style={{ marginLeft: 4, color: '#ffb450', fontWeight: 700, cursor: isUnlocked ? 'pointer' : undefined }}
+                onClick={isUnlocked ? e => { e.stopPropagation(); onOpenMerge?.(r); } : undefined}
+              >!</span>
+            )}
           </>
         ),
       },
