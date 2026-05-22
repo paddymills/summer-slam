@@ -59,15 +59,19 @@ export default function LeaderboardTab({ entries, settings }) {
     const b = norm(row.boaterFirst, row.boaterLast);
     const c = norm(row.coAnglerFirst, row.coAnglerLast);
     const currentYear = new Date().getFullYear();
-    const boaterYears = new Set(), coYears = new Set();
+    const teamYears = new Set(), boaterYears = new Set(), coYears = new Set();
     pastWinners.forEach(w => {
       if (Number(w.year) >= currentYear) return;
       const wb = norm(w.boaterFirst, w.boaterLast);
       const wc = norm(w.coAnglerFirst, w.coAnglerLast);
-      if (b && (wb === b || wc === b)) boaterYears.add(String(w.year));
-      if (c && (wb === c || wc === c)) coYears.add(String(w.year));
+      const yr = String(w.year);
+      const bMatch = b && (wb === b || wc === b);
+      const cMatch = c && (wb === c || wc === c);
+      if (bMatch && cMatch) teamYears.add(yr);
+      else if (bMatch)      boaterYears.add(yr);
+      else if (cMatch)      coYears.add(yr);
     });
-    return { boaterYears: [...boaterYears].sort(), coYears: [...coYears].sort() };
+    return { teamYears: [...teamYears].sort(), boaterYears: [...boaterYears].sort(), coYears: [...coYears].sort() };
   }
 
   const cwEntry    = settings.currentlyWeighing;
@@ -257,7 +261,7 @@ export default function LeaderboardTab({ entries, settings }) {
           const isOpt1    = option1Row && row.id === option1Row.id;
           const isOpt2    = option2Row && row.id === option2Row.id;
           const winData   = getPastWinData(row);
-          const hasBadge  = isLunker1 || isLunker2 || isOpt1 || isOpt2 || winData.boaterYears.length > 0 || winData.coYears.length > 0;
+          const hasBadge  = isLunker1 || isLunker2 || isOpt1 || isOpt2 || winData.teamYears.length > 0 || winData.boaterYears.length > 0 || winData.coYears.length > 0;
 
           const BADGE = { display: 'inline-flex', alignItems: 'center', gap: 4, borderRadius: 6, padding: '4px 10px', fontSize: 13, fontWeight: 700, letterSpacing: 0.3 };
 
@@ -281,6 +285,9 @@ export default function LeaderboardTab({ entries, settings }) {
                     {isLunker2 && <span style={{ ...BADGE, background: '#444', border: '1px solid #aaa', color: '#fff' }}>🎯 Lunker 2nd</span>}
                     {isOpt1    && <span style={{ ...BADGE, background: '#0a5a9e', border: '1px solid #78c8ff', color: '#fff' }}>⚡ Option 1</span>}
                     {isOpt2    && <span style={{ ...BADGE, background: '#1e6e9e', border: '1px solid #a8dcff', color: '#fff' }}>⚡ Option 2</span>}
+                    {winData.teamYears.map(yr => (
+                      <span key={`t-${yr}`} style={{ ...BADGE, background: '#3d2a00', border: '1px solid #ffd700', color: '#ffd700' }}>🏆 {yr}</span>
+                    ))}
                     {winData.boaterYears.map(yr => (
                       <span key={`b-${yr}`} style={{ ...BADGE, background: '#3d2a00', border: '1px solid #ffd700', color: '#ffd700' }}>🏆 {row.boaterLast} · {yr}</span>
                     ))}
