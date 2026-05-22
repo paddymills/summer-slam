@@ -237,7 +237,9 @@ export async function onRequestPatch({ params, request, env }) {
 }
 
 export async function onRequestDelete({ params, request, env }) {
-  if (!checkAuth(request, env)) return Response.json({ error: 'Unauthorized' }, { status: 401 });
+  const isAdmin    = checkAuth(request, env);
+  const isOperator = checkOperatorAuth(request, env);
+  if (!isOperator) return Response.json({ error: 'Unauthorized' }, { status: 401 });
   if (!/^\d+$/.test(params.id)) return Response.json({ error: 'Invalid id' }, { status: 400 });
   try {
     const db = getDb(env);
@@ -248,6 +250,11 @@ export async function onRequestDelete({ params, request, env }) {
       args: [params.id],
     });
     const entry = entryResult.rows[0];
+
+    // Operators can only delete unsigned (pending) entries; admin can delete any
+    if (!isAdmin && Number(entry?.app_signed) === 1) {
+      return Response.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
     await db.execute({ sql: 'DELETE FROM entries WHERE id = ?', args: [params.id] });
 
