@@ -76,7 +76,7 @@ rosterFilterFn.autoRemove = v => !v?.text && (!v?.regFilter || v.regFilter === '
 const COL_WIDTHS = {
   _rank: 52, boaterFirst: 100, boaterLast: 100, coAnglerFirst: 100, coAnglerLast: 100,
   boatNo: 68, numFish: 58, lunkerWeight: 90, totalWeight: 110,
-  lunker: 68, option: 68, paid: 58, appSigned: 90, offWater: 82, buyIn: 82, actions: 108,
+  lunker: 68, option: 68, paid: 58, appSigned: 90, offWater: 82, buyIn: 82, actions: 150,
   signedUpAt: 130,
 };
 

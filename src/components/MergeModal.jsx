@@ -14,7 +14,7 @@ function fullName(e, role) {
 function EntryCard({ entry, isKeeper, onKeep }) {
   return (
     <div style={{
-      flex: 1,
+      flex: '1 1 200px',
       border: `2px solid ${isKeeper ? 'rgba(139,180,225,0.7)' : 'rgba(139,180,225,0.2)'}`,
       borderRadius: 10,
       padding: '14px 16px',
@@ -146,7 +146,7 @@ export default function MergeModal({ entryA, entryB, onMerge, onCancel, settings
             Pick which entry to <strong style={{ color: 'var(--white)' }}>keep</strong>. The other will be deleted. Useful data from the deleted entry will be transferred automatically.
           </p>
 
-          <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
+          <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
             <EntryCard entry={entryA} isKeeper={keeperId === entryA.id} onKeep={() => setKeeperId(entryA.id)} />
             <EntryCard entry={entryB} isKeeper={keeperId === entryB.id} onKeep={() => setKeeperId(entryB.id)} />
           </div>
@@ -181,6 +181,7 @@ export default function MergeModal({ entryA, entryB, onMerge, onCancel, settings
               display: 'flex',
               alignItems: 'center',
               gap: 12,
+              flexWrap: 'wrap',
             }}>
               <span style={{ color: 'var(--header-bg)', flex: 1 }}>
                 Both entries have a buy-in ({fmtMoney(keeperBuyIn)} + {fmtMoney(otherBuyIn)}). Combine them?
