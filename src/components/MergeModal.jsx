@@ -111,7 +111,7 @@ function computeMerge(keeper, other, combineBuyIn) {
   return { updates, changes };
 }
 
-export default function MergeModal({ entryA, entryB, onMerge, onCancel }) {
+export default function MergeModal({ entryA, entryB, onMerge, onCancel, settings }) {
   const [keeperId, setKeeperId]       = useState(entryA.id);
   const [combineBuyIn, setCombine]    = useState(false);
 
@@ -121,6 +121,15 @@ export default function MergeModal({ entryA, entryB, onMerge, onCancel }) {
   const keeperBuyIn = parseFloat(keeper.buyIn || 0);
   const otherBuyIn  = parseFloat(other.buyIn  || 0);
   const bothHaveBuyIn = keeperBuyIn > 0 && otherBuyIn > 0;
+
+  const lunkerFee = parseFloat(settings?.fees?.lunkerFee || 0);
+  const optFee    = parseFloat(settings?.fees?.optFee    || 0);
+  const bothLunker = (entryA.lunker === 1 || entryA.lunker === '1') && (entryB.lunker === 1 || entryB.lunker === '1');
+  const bothOption = (entryA.option === 1 || entryA.option === '1') && (entryB.option === 1 || entryB.option === '1');
+  const potWarnings = [
+    ...(bothLunker && lunkerFee > 0 ? [`Lunker pot short $${lunkerFee.toFixed(2)}`] : []),
+    ...(bothOption && optFee    > 0 ? [`Option pot short $${optFee.toFixed(2)}`]    : []),
+  ];
 
   const { updates, changes } = computeMerge(keeper, other, combineBuyIn);
 
@@ -141,6 +150,25 @@ export default function MergeModal({ entryA, entryB, onMerge, onCancel }) {
             <EntryCard entry={entryA} isKeeper={keeperId === entryA.id} onKeep={() => setKeeperId(entryA.id)} />
             <EntryCard entry={entryB} isKeeper={keeperId === entryB.id} onKeep={() => setKeeperId(entryB.id)} />
           </div>
+
+          {potWarnings.length > 0 && (
+            <div style={{
+              background: 'rgba(255,107,107,0.08)',
+              border: '1.5px solid rgba(255,107,107,0.4)',
+              borderRadius: 8,
+              padding: '10px 14px',
+              marginBottom: 12,
+              fontSize: 13,
+            }}>
+              <div style={{ color: '#ff9090', fontWeight: 700, marginBottom: 4 }}>⚠ Side pot cash already collected</div>
+              <div style={{ color: 'var(--header-bg)' }}>
+                Both entries share the same side pot(s). After merging, the following amounts will be under-reported in pot totals — account for this manually in payouts:
+              </div>
+              <ul style={{ margin: '6px 0 0', paddingLeft: 18 }}>
+                {potWarnings.map(w => <li key={w} style={{ color: 'var(--white)', fontWeight: 600 }}>{w}</li>)}
+              </ul>
+            </div>
+          )}
 
           {bothHaveBuyIn && (
             <div style={{

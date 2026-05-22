@@ -843,6 +843,7 @@ const saveSettingsMut   = useSaveSettings();
           entryB={mergePair.entryB}
           onMerge={handleMerge}
           onCancel={() => setMergePair(null)}
+          settings={settingsWithTheme}
         />
       )}
 
