@@ -55,7 +55,7 @@ function EntryCard({ entry, isKeeper, onKeep }) {
   );
 }
 
-function computeMerge(keeper, other) {
+function computeMerge(keeper, other, combineBuyIn) {
   const changes = [];
   const updates = {};
 
@@ -76,9 +76,12 @@ function computeMerge(keeper, other) {
 
   const keeperBuyIn = parseFloat(keeper.buyIn || 0);
   const otherBuyIn  = parseFloat(other.buyIn  || 0);
-  if (otherBuyIn > keeperBuyIn) {
+  if (combineBuyIn && otherBuyIn > 0) {
+    updates.buyIn = keeperBuyIn + otherBuyIn;
+    changes.push(`Buy-In: ${fmtMoney(keeperBuyIn)} + ${fmtMoney(otherBuyIn)} = ${fmtMoney(keeperBuyIn + otherBuyIn)}`);
+  } else if (otherBuyIn > keeperBuyIn) {
     updates.buyIn = otherBuyIn;
-    changes.push(`Buy-In: ${fmtMoney(otherBuyIn)}`);
+    changes.push(`Buy-In: ${fmtMoney(otherBuyIn)} (higher of the two)`);
   }
 
   if (!keeper.paid && other.paid) {
@@ -99,11 +102,17 @@ function computeMerge(keeper, other) {
 }
 
 export default function MergeModal({ entryA, entryB, onMerge, onCancel }) {
-  const [keeperId, setKeeperId] = useState(entryA.id);
+  const [keeperId, setKeeperId]       = useState(entryA.id);
+  const [combineBuyIn, setCombine]    = useState(false);
 
   const keeper = keeperId === entryA.id ? entryA : entryB;
   const other  = keeperId === entryA.id ? entryB : entryA;
-  const { updates, changes } = computeMerge(keeper, other);
+
+  const keeperBuyIn = parseFloat(keeper.buyIn || 0);
+  const otherBuyIn  = parseFloat(other.buyIn  || 0);
+  const bothHaveBuyIn = keeperBuyIn > 0 && otherBuyIn > 0;
+
+  const { updates, changes } = computeMerge(keeper, other, combineBuyIn);
 
   return (
     <div className="edit-overlay" onPointerDown={e => { if (e.target === e.currentTarget) onCancel(); }}>
@@ -122,6 +131,35 @@ export default function MergeModal({ entryA, entryB, onMerge, onCancel }) {
             <EntryCard entry={entryA} isKeeper={keeperId === entryA.id} onKeep={() => setKeeperId(entryA.id)} />
             <EntryCard entry={entryB} isKeeper={keeperId === entryB.id} onKeep={() => setKeeperId(entryB.id)} />
           </div>
+
+          {bothHaveBuyIn && (
+            <div style={{
+              background: 'rgba(240,173,78,0.07)',
+              border: '1px solid rgba(240,173,78,0.3)',
+              borderRadius: 8,
+              padding: '10px 14px',
+              marginBottom: 12,
+              fontSize: 13,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+            }}>
+              <span style={{ color: 'var(--header-bg)', flex: 1 }}>
+                Both entries have a buy-in ({fmtMoney(keeperBuyIn)} + {fmtMoney(otherBuyIn)}). Combine them?
+              </span>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                <input
+                  type="checkbox"
+                  checked={combineBuyIn}
+                  onChange={e => setCombine(e.target.checked)}
+                  style={{ width: 16, height: 16, cursor: 'pointer' }}
+                />
+                <span style={{ color: combineBuyIn ? 'var(--white)' : 'var(--header-bg)', fontWeight: combineBuyIn ? 700 : 400 }}>
+                  Add together ({fmtMoney(keeperBuyIn + otherBuyIn)})
+                </span>
+              </label>
+            </div>
+          )}
 
           <div style={{
             background: 'rgba(168,200,160,0.07)',

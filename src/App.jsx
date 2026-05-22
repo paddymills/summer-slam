@@ -812,7 +812,12 @@ const saveSettingsMut   = useSaveSettings();
           coAnglerContactId={null}
           prefillSigs={rosterWaiver.prefillSigs}
           settings={settingsWithTheme}
-          onClose={() => { setRosterWaiver(null); entriesQuery.refetch(); }}
+          onClose={(result) => {
+            const name = rosterWaiver ? `${rosterWaiver.entry.boaterFirst} ${rosterWaiver.entry.boaterLast}` : '';
+            setRosterWaiver(null);
+            entriesQuery.refetch();
+            if (result) showToast(`Application submitted for ${name}`, 'success');
+          }}
         />
       )}
 

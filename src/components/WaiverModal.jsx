@@ -217,6 +217,13 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
   const [nearDupPrompt, setNearDupPrompt] = useState(null);
   const pinRef = useRef(null);
 
+  // Auto-close after operator submit (customerMode keeps the Done screen for PDF sharing)
+  useEffect(() => {
+    if (submitted && !customerMode && submittedSigs) {
+      onClose(submittedSigs.result);
+    }
+  }, [submitted, customerMode, submittedSigs]); // eslint-disable-line react-hooks/exhaustive-deps
+
   // Auto-focus PIN field when it appears
   useEffect(() => {
     if (showPinInput) setTimeout(() => pinRef.current?.focus(), 50);
