@@ -149,23 +149,27 @@ export function exportRosterPdf(entries, settings, contacts = [], winners = []) 
   });
   firstTimeNames.sort();
 
-  // --- Past champions map: normName → sorted array of years won ---
-  const champMap = new Map();
-  winners.forEach(w => {
-    [
-      normName(w.boaterFirst, w.boaterLast),
-      normName(w.coAnglerFirst, w.coAnglerLast),
-    ].filter(Boolean).forEach(key => {
-      if (!champMap.has(key)) champMap.set(key, []);
-      champMap.get(key).push(String(w.year));
+  // --- Past champion badges (same team/individual logic as leaderboard) ---
+  const CHAMP_STYLE = 'background:#000;color:#fff;font-size:8px;font-weight:bold;padding:1px 5px;border-radius:2px;margin-left:5px;white-space:nowrap;display:inline-block';
+  function getChampBadges(bFirst, bLast, cFirst, cLast) {
+    const b = normName(bFirst, bLast);
+    const c = normName(cFirst, cLast);
+    const teamYears = new Set(), boaterYears = new Set(), coYears = new Set();
+    winners.forEach(w => {
+      const wb = normName(w.boaterFirst, w.boaterLast);
+      const wc = normName(w.coAnglerFirst, w.coAnglerLast);
+      const yr = String(w.year);
+      const bMatch = b && (wb === b || wc === b);
+      const cMatch = c && (wb === c || wc === c);
+      if (bMatch && cMatch)   teamYears.add(yr);
+      else if (bMatch)        boaterYears.add(yr);
+      else if (cMatch)        coYears.add(yr);
     });
-  });
-  function champBadge(first, last) {
-    const years = champMap.get(normName(first, last));
-    if (!years?.length) return '';
-    return years.sort().map(yr =>
-      ` <span style="background:#000;color:#fff;font-size:8px;font-weight:bold;padding:1px 5px;border-radius:2px;margin-left:5px;white-space:nowrap;display:inline-block">${last || first} &middot; ${yr}</span>`
-    ).join('');
+    return [
+      ...[...teamYears].sort().map(yr  => `<span style="${CHAMP_STYLE}">${yr} CHAMP</span>`),
+      ...[...boaterYears].sort().map(yr => `<span style="${CHAMP_STYLE}">${bLast || bFirst} &middot; ${yr}</span>`),
+      ...[...coYears].sort().map(yr    => `<span style="${CHAMP_STYLE}">${cLast || cFirst} &middot; ${yr}</span>`),
+    ].join(' ');
   }
 
   // --- Catch performance ---
@@ -357,8 +361,8 @@ export function exportRosterPdf(entries, settings, contacts = [], winners = []) 
     return `<tr>
       <td style="background:${bg};text-align:center;padding:5px 8px;color:#777;font-size:10px">${i + 1}</td>
       <td style="background:${bg};text-align:center;padding:5px 8px;font-weight:bold">${e.boatNo || '—'}</td>
-      <td style="background:${bg};padding:5px 8px">${boater}${champBadge(e.boaterFirst, e.boaterLast)}</td>
-      <td style="background:${bg};padding:5px 8px;color:#555">${co}${champBadge(e.coAnglerFirst, e.coAnglerLast)}</td>
+      <td style="background:${bg};padding:5px 8px">${boater}${getChampBadges(e.boaterFirst, e.boaterLast, e.coAnglerFirst, e.coAnglerLast)}</td>
+      <td style="background:${bg};padding:5px 8px;color:#555">${co}</td>
       <td style="background:${bg};text-align:center;padding:5px 8px;color:${e.boatNo ? '#222' : '#aaa'}">${e.boatNo ? '✓' : '—'}</td>
     </tr>`;
   }).join('');
@@ -395,7 +399,7 @@ export function exportRosterPdf(entries, settings, contacts = [], winners = []) 
     return `<tr>
       <td style="background:${bg};text-align:center;padding:5px 8px;font-weight:bold;font-size:${i < 3 ? 14 : 11}px">${medal}</td>
       <td style="background:${bg};text-align:center;padding:5px 8px;font-weight:bold">${e.boatNo || '—'}</td>
-      <td style="background:${bg};padding:5px 8px">${names}${pen}${champBadge(e.boaterFirst, e.boaterLast)}${potBadges}</td>
+      <td style="background:${bg};padding:5px 8px">${names}${pen}${getChampBadges(e.boaterFirst, e.boaterLast, e.coAnglerFirst, e.coAnglerLast)}${potBadges}</td>
       <td style="background:${bg};text-align:center;padding:5px 8px">${e.numFish || 0}</td>
       <td style="background:${bg};text-align:center;padding:5px 8px">${parseFloat(e.lunkerWeight) > 0 ? parseFloat(e.lunkerWeight).toFixed(2) : '—'}</td>
       <td style="background:${bg};text-align:center;padding:5px 8px;font-weight:bold${e._isDQ ? ';color:#aaa' : ''}">${ew}</td>
