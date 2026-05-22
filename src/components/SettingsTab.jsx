@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { calcWeightedPayouts } from '../utils/calculations';
 import { exportCSV, importCSV } from '../utils/csv';
 import { evalMath } from '../utils/evalMath';
-import { fetchEventLog, clearEventLog, fetchQrCounts, fetchContacts } from '../utils/api';
+import { fetchEventLog, clearEventLog, fetchQrCounts, fetchContacts, fetchArchiveWinners } from '../utils/api';
 import { exportRosterPdf } from '../utils/exportRosterPdf';
 
 const PANEL = { background: 'var(--settings-panel-bg)', border: '1px solid rgba(139,180,225,0.2)', borderRadius: 10, padding: 20, marginBottom: 16 };
@@ -795,8 +795,11 @@ export default function SettingsTab({ settings, entries, isUnlocked, onUpdateSet
             <button className="btn btn-outline" onClick={() => setShowOffWaterLog(true)}>🏁 Check Out Log</button>
             <button className="btn btn-outline" onClick={() => setShowLog(true)}>📋 Weigh-In Log</button>
             {isUnlocked && <button className="btn btn-outline" onClick={async () => {
-              const contacts = await fetchContacts().catch(() => []);
-              exportRosterPdf(entries, settings, contacts);
+              const [contacts, winners] = await Promise.all([
+                fetchContacts().catch(() => []),
+                fetchArchiveWinners().catch(() => []),
+              ]);
+              exportRosterPdf(entries, settings, contacts, winners);
             }}>🖨️ Export PDF Report</button>}
             {isUnlocked && (
               <label className="btn btn-outline" style={{ cursor: 'pointer' }}>

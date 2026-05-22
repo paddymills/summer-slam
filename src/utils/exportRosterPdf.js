@@ -102,7 +102,7 @@ function sectionHead(title) {
   return `<div style="background:#111;color:#fff;padding:6px 12px;font-size:9px;font-weight:bold;text-transform:uppercase;letter-spacing:2px;margin:22px 0 10px">${title}</div>`;
 }
 
-export function exportRosterPdf(entries, settings, contacts = []) {
+export function exportRosterPdf(entries, settings, contacts = [], winners = []) {
   const now           = new Date();
   const tDate         = settings.tournamentDate ? new Date(settings.tournamentDate + 'T12:00:00') : null;
   const year          = tDate ? tDate.getFullYear() : now.getFullYear();
@@ -135,10 +135,36 @@ export function exportRosterPdf(entries, settings, contacts = []) {
   }
   const contactNameSet = new Set(contacts.map(c => normName(c.firstName || c.first_name, c.lastName || c.last_name)).filter(Boolean));
   let returningCount = 0, newCount = 0;
+  const firstTimeNames = [];
   registered.forEach(e => {
     const n = normName(e.boaterFirst, e.boaterLast);
-    if (n) { contactNameSet.has(n) ? returningCount++ : newCount++; }
+    if (n) {
+      if (contactNameSet.has(n)) {
+        returningCount++;
+      } else {
+        newCount++;
+        firstTimeNames.push([e.boaterFirst, e.boaterLast, e.boaterSuffix].filter(Boolean).join(' '));
+      }
+    }
   });
+  firstTimeNames.sort();
+
+  // --- Past champions map: normName → sorted array of years won ---
+  const champMap = new Map();
+  winners.forEach(w => {
+    [
+      normName(w.boaterFirst, w.boaterLast),
+      normName(w.coAnglerFirst, w.coAnglerLast),
+    ].filter(Boolean).forEach(key => {
+      if (!champMap.has(key)) champMap.set(key, []);
+      champMap.get(key).push(String(w.year));
+    });
+  });
+  function champBadge(first, last) {
+    const years = champMap.get(normName(first, last));
+    if (!years?.length) return '';
+    return ` <span style="background:#000;color:#fff;font-size:8px;font-weight:bold;padding:1px 5px;border-radius:2px;margin-left:5px">${years.sort().join(', ')} CHAMP</span>`;
+  }
 
   // --- Catch performance ---
   const maxFishLimit   = parseInt(settings.penalties?.maxFish) || 5;
@@ -329,8 +355,8 @@ export function exportRosterPdf(entries, settings, contacts = []) {
     return `<tr>
       <td style="background:${bg};text-align:center;padding:5px 8px;color:#777;font-size:10px">${i + 1}</td>
       <td style="background:${bg};text-align:center;padding:5px 8px;font-weight:bold">${e.boatNo || '—'}</td>
-      <td style="background:${bg};padding:5px 8px">${boater}</td>
-      <td style="background:${bg};padding:5px 8px;color:#555">${co}</td>
+      <td style="background:${bg};padding:5px 8px">${boater}${champBadge(e.boaterFirst, e.boaterLast)}</td>
+      <td style="background:${bg};padding:5px 8px;color:#555">${co}${champBadge(e.coAnglerFirst, e.coAnglerLast)}</td>
       <td style="background:${bg};text-align:center;padding:5px 8px;color:${e.boatNo ? '#222' : '#aaa'}">${e.boatNo ? '✓' : '—'}</td>
     </tr>`;
   }).join('');
@@ -367,7 +393,7 @@ export function exportRosterPdf(entries, settings, contacts = []) {
     return `<tr>
       <td style="background:${bg};text-align:center;padding:5px 8px;font-weight:bold;font-size:${i < 3 ? 14 : 11}px">${medal}</td>
       <td style="background:${bg};text-align:center;padding:5px 8px;font-weight:bold">${e.boatNo || '—'}</td>
-      <td style="background:${bg};padding:5px 8px">${names}${pen}${potBadges}</td>
+      <td style="background:${bg};padding:5px 8px">${names}${pen}${champBadge(e.boaterFirst, e.boaterLast)}${potBadges}</td>
       <td style="background:${bg};text-align:center;padding:5px 8px">${e.numFish || 0}</td>
       <td style="background:${bg};text-align:center;padding:5px 8px">${parseFloat(e.lunkerWeight) > 0 ? parseFloat(e.lunkerWeight).toFixed(2) : '—'}</td>
       <td style="background:${bg};text-align:center;padding:5px 8px;font-weight:bold${e._isDQ ? ';color:#aaa' : ''}">${ew}</td>
@@ -406,6 +432,13 @@ export function exportRosterPdf(entries, settings, contacts = []) {
     ${statRows.join('')}
   </table>
   ${contactNameSet.size > 0 ? `<div style="font-size:9px;color:#999;margin-top:4px">* Returning/First-Time estimates based on contacts database at time of report.</div>` : ''}
+
+  <!-- First-Time Anglers -->
+  ${firstTimeNames.length > 0 ? `
+  ${sectionHead(`First-Time Anglers — ${firstTimeNames.length}`)}
+  <div style="columns:2;column-gap:32px;font-size:11px">
+    ${firstTimeNames.map(n => `<div style="padding:3px 0;border-bottom:1px solid #eee;break-inside:avoid">${n}</div>`).join('')}
+  </div>` : ''}
 
   <!-- Catch Performance -->
   ${hasWeightData ? sectionHead('Catch Performance') : ''}
