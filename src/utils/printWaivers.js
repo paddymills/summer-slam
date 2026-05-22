@@ -285,17 +285,20 @@ export function printBlankApplication(settings, formData = null) {
 
       <p style="font-size:8.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin:0 0 3px;color:#333;">Entry Fees</p>
       <div style="border:1px solid #999;border-radius:4px;padding:5px 10px;margin-bottom:6px;background:#fafafa;font-size:11px;">
-        Entry Fee: <strong>$${entryFee}</strong>
-        &nbsp;&nbsp;
-        Lunker: <strong>$${lunkerFee}</strong> <input type="checkbox" style="vertical-align:middle;" /> Yes
-        &nbsp;&nbsp;
-        Option: <strong>$${optFee}</strong> <input type="checkbox" style="vertical-align:middle;" /> Yes
-        &nbsp;&nbsp;&nbsp;
-        Buy-In Total:${line('', '100px')}
-        &nbsp;&nbsp;&nbsp;
-        Boater Order #:${line(f.boaterOrderNo || '', '90px')}
-        &nbsp;&nbsp;
-        Co-Angler Order #:${line(f.coAnglerOrderNo || '', '90px')}
+        <div>
+          Entry Fee: <strong>$${entryFee}</strong>
+          &nbsp;&nbsp;
+          Lunker: <strong>$${lunkerFee}</strong> <input type="checkbox" style="vertical-align:middle;" /> Yes
+          &nbsp;&nbsp;
+          Option: <strong>$${optFee}</strong> <input type="checkbox" style="vertical-align:middle;" /> Yes
+          &nbsp;&nbsp;&nbsp;
+          Buy-In Total:${line('', '100px')}
+        </div>
+        <div style="margin-top:4px;">
+          Boater Order #:${line(f.boaterOrderNo || '', '90px')}
+          &nbsp;&nbsp;&nbsp;
+          Co-Angler Order #:${line(f.coAnglerOrderNo || '', '90px')}
+        </div>
       </div>
 
       <p style="font-size:8.5px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin:0 0 3px;color:#333;">Anglers</p>
