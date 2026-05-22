@@ -975,7 +975,6 @@ function WeighInLogModal({ entries, penalties, onClose, onClearLog }) {
   }
 
   function handleClear() {
-    if (!confirm('Clear the weigh-in log? This removes timestamps from all entries and cannot be undone.')) return;
     onClearLog();
     onClose();
   }

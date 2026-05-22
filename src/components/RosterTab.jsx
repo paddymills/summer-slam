@@ -949,7 +949,7 @@ export default function RosterTab({
                 🗂️ Archive Year
               </button>
               <div className="actions-divider" />
-              <button className="actions-item actions-item--danger" onClick={() => { setActionsOpen(false); confirmed('clear all entries', onClearAll); }}>
+              <button className="actions-item actions-item--danger" onClick={() => { setActionsOpen(false); onClearAll(); }}>
                 🗑️ Clear All
               </button>
             </div>
