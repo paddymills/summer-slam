@@ -30,10 +30,11 @@ export function calcRanks(entries, settings) {
   const lateDQMin     = parseInt(settings?.penalties?.latePenaltyDQMin    ?? 15);
 
   const withPenalties = entries.map(entry => {
+    const _isDNS = !!entry.boatNo && !entry.checkedInAt;
     const base = parseFloat(entry.totalWeight) || 0;
-    const noLate = { ...entry, _latePenalty: 0, _isDQ: false, _minsLate: 0, _effectiveWeight: base };
+    const noLate = { ...entry, _isDNS, _latePenalty: 0, _isDQ: false, _minsLate: 0, _effectiveWeight: _isDNS ? 0 : base };
 
-    if (!entry.checkedInAt || !entry.boatNo || !flights.length) return noLate;
+    if (_isDNS || !entry.checkedInAt || !entry.boatNo || !flights.length) return noLate;
 
     const boatNum = parseInt(entry.boatNo);
     const flight  = flights.find(f => boatNum >= parseInt(f.boatStart) && (!f.boatEnd || boatNum <= parseInt(f.boatEnd)));
@@ -81,7 +82,7 @@ export function calcRanks(entries, settings) {
 
 export function getStats(entries, fees) {
   const named = entries.filter(r => r.boaterFirst || r.boaterLast);
-  const boated = entries.filter(r => r.boatNo);
+  const boated = entries.filter(r => r.boatNo && r.checkedInAt);
 
   const lunkerRows = boated.filter(r => r.lunker === 1 && parseFloat(r.lunkerWeight) > 0 && !r._isDQ);
   const topLunkerRow = lunkerRows.length

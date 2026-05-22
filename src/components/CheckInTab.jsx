@@ -65,7 +65,7 @@ function ToggleField({ label, on, onToggle }) {
   );
 }
 
-export default function CheckInTab({ entries, onSave }) {
+export default function CheckInTab({ entries, onSave, settings }) {
   const [query, setQuery]           = useState('');
   const [expandedId, setExpandedId] = useState(null);
   const [draft, setDraft]           = useState({});
@@ -182,6 +182,11 @@ export default function CheckInTab({ entries, onSave }) {
             const appNotSigned = !isOn(row.appSigned);
             const notPaid = !isOn(row.paid);
             const alreadyCheckedIn = !!row.checkedInAt;
+            const isDNS = !!row.boatNo && !row.checkedInAt;
+            const tDate = settings?.tournamentDate;
+            const isDayOf = tDate && row.signedUpAt
+              ? row.signedUpAt.slice(0, 10) >= tDate
+              : false;
             return (
               <div key={row.id} style={{
                 borderRadius: 8,
@@ -215,6 +220,12 @@ export default function CheckInTab({ entries, onSave }) {
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                    {isDNS && !alreadyCheckedIn && (
+                      <span style={{ fontSize: 10, background: 'rgba(180,180,180,0.15)', color: '#aaa', borderRadius: 4, padding: '1px 6px', fontWeight: 700 }}>DNS</span>
+                    )}
+                    {isDayOf && (
+                      <span style={{ fontSize: 10, background: 'rgba(240,173,78,0.2)', color: '#f0ad4e', borderRadius: 4, padding: '1px 6px', fontWeight: 700 }}>DAY OF</span>
+                    )}
                     {notPaid && (
                       <span style={{ fontSize: 10, background: 'rgba(255,107,107,0.2)', color: '#ff6b6b', borderRadius: 4, padding: '1px 6px', fontWeight: 700 }}>$</span>
                     )}

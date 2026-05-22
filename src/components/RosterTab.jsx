@@ -643,10 +643,12 @@ export default function RosterTab({
             <tbody>
               {opSorted.map(row => {
                 const isPaidSigned = (row.paid === 1 || row.paid === '1') && (row.appSigned === 1 || row.appSigned === '1');
+                const isDNS = !!row.boatNo && !row.checkedInAt;
                 return (
-                  <tr key={row.id} style={!isPaidSigned ? { opacity: 0.65 } : undefined}>
+                  <tr key={row.id} style={isDNS ? { opacity: 0.5 } : !isPaidSigned ? { opacity: 0.65 } : undefined}>
                     <td className="td-name">
                       {row.boaterFirst}
+                      {isDNS && <span title="Did Not Start" style={{ marginLeft: 4, fontSize: 10, background: 'rgba(180,180,180,0.15)', color: '#aaa', borderRadius: 3, padding: '1px 4px', fontWeight: 700 }}>DNS</span>}
                       {duplicateEntryIds.has(row.id) && <span title="Duplicate angler" style={{ marginLeft: 4, color: '#ffb450', fontWeight: 700 }}>!</span>}
                     </td>
                     <td className="td-name">{row.boaterLast}{row.boaterSuffix ? ` ${row.boaterSuffix}` : ''}</td>

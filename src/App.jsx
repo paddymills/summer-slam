@@ -746,7 +746,7 @@ const saveSettingsMut   = useSaveSettings();
         {everUnlocked && (
           <>
             <div style={{ display: activeTab === 'checkin' ? 'contents' : 'none' }}>
-              <CheckInTab entries={rankedEntries} onSave={handleCheckInSave} />
+              <CheckInTab entries={rankedEntries} onSave={handleCheckInSave} settings={settings} />
             </div>
             <div style={{ display: activeTab === 'boatcheck' ? 'contents' : 'none' }}>
               <BoatCheckTab

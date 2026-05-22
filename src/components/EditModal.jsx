@@ -319,8 +319,15 @@ export default function EditModal({ entry, onSave, onCancel, settings, operatorM
                 <div className="edit-grid-3">
                   <div className="form-field">
                     <label htmlFor="em-boat-no">Boat #</label>
-                    <input id="em-boat-no" name="boatNo" type="text" value={form.boatNo} placeholder="42" inputMode="numeric"
-                           onChange={e => set('boatNo', e.target.value)} />
+                    {entry.boatNo ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 8, background: 'rgba(139,180,225,0.07)', border: '1px solid rgba(139,180,225,0.2)' }}>
+                        <span style={{ color: 'var(--gold-light)', fontWeight: 700, fontSize: 16 }}>#{entry.boatNo}</span>
+                        <span style={{ fontSize: 11, color: 'var(--header-bg)' }}>assigned — locked</span>
+                      </div>
+                    ) : (
+                      <input id="em-boat-no" name="boatNo" type="text" value={form.boatNo} placeholder="42" inputMode="numeric"
+                             onChange={e => set('boatNo', e.target.value)} />
+                    )}
                   </div>
                   <div className="form-field">
                     <label htmlFor="em-num-fish"># Fish</label>
