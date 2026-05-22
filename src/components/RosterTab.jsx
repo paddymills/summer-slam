@@ -84,7 +84,7 @@ export default function RosterTab({
   entries, settings, isUnlocked, isOperator, buyInBlurred,
   onEdit, onAdd, onDelete, onClearAll, onImport,
   onToggleOffWater, onToggleField, onUpdateInlineField,
-  onClearDeductions, onArchive, onSignApp, onDrawBoats,
+  onClearDeductions, onArchive, onSignApp, onDrawBoats, onVoidSignature,
 }) {
   const entryFee = parseFloat(settings.fees?.entryFee) || 249;
   const offWater = settings.offWater || {};
@@ -387,8 +387,7 @@ export default function RosterTab({
         id: 'appSigned', accessorKey: 'appSigned', header: 'App Signed', size: COL_WIDTHS.appSigned,
         sortingFn: numericSort,
         meta: {
-          getTdStyle: () => ({ textAlign: 'center', cursor: isUnlocked ? 'pointer' : undefined }),
-          onTdClick: (e, r) => { e.stopPropagation(); isUnlocked && onToggleField(r.id, 'appSigned'); },
+          getTdStyle: () => ({ textAlign: 'center' }),
         },
         cell: ({ row: { original: r } }) => {
           const signed = r.appSigned === 1 || r.appSigned === '1';
@@ -491,6 +490,14 @@ export default function RosterTab({
                     $? Verify
                   </button>
                 )}
+                <button
+                  className="btn btn-sm"
+                  onClick={() => onVoidSignature?.(r)}
+                  style={{ marginLeft: 4, background: 'rgba(255,107,107,0.1)', border: '1px solid rgba(255,107,107,0.4)', color: '#ff9090', fontSize: 11 }}
+                  title="Void signed application (admin only)"
+                >
+                  Void
+                </button>
               </>
             ) : (
               <button className="btn btn-outline btn-sm" onClick={() => onSignApp?.(r)} style={{ marginLeft: 4, opacity: 0.7 }}>Sign</button>

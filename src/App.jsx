@@ -435,6 +435,18 @@ const saveSettingsMut   = useSaveSettings();
     });
   }
 
+  function handleVoidSignature(entry) {
+    setConfirmAction({
+      label: `void the signed application for ${entry.boaterFirst} ${entry.boaterLast}`,
+      action: () => {
+        updateEntryMut.mutate({ id: entry.id, data: { ...entry, appSigned: 0, appSignedAt: null } }, {
+          onError: () => showToast('Failed to void signature', 'error'),
+          onSuccess: () => showToast('Application voided — use Sign button to re-sign', 'info'),
+        });
+      },
+    });
+  }
+
   function handleClearAll() {
     setConfirmAction({
       label: 'clear ALL roster data — this cannot be undone',
@@ -654,6 +666,7 @@ const saveSettingsMut   = useSaveSettings();
             onArchive={handleArchive}
             onSignApp={handleOpenSignApp}
             onDrawBoats={handleDrawBoats}
+            onVoidSignature={handleVoidSignature}
           />
         </div>
         <div style={{ display: activeTab === 'leaderboard' ? 'contents' : 'none' }}>
