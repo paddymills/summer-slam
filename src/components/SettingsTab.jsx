@@ -22,7 +22,8 @@ export default function SettingsTab({ settings, entries, isUnlocked, onUpdateSet
   const [showSignUpLog, setShowSignUpLog]   = useState(false);
   const [showCheckInLog, setShowCheckInLog] = useState(false);
   const [showOffWaterLog, setShowOffWaterLog] = useState(false);
-  const [tournamentDate,     setTournamentDate]     = useState(settings.tournamentDate     || '');
+  const [tournamentDate,        setTournamentDate]        = useState(settings.tournamentDate        || '');
+  const [applicationsOpenDate,  setApplicationsOpenDate]  = useState(settings.applicationsOpenDate  || '');
   const [tournamentLocation, setTournamentLocation] = useState(settings.tournamentLocation || '');
   const [checkInOpens, setCheckInOpens]             = useState(settings.checkInOpens       || '04:00');
   const [localFlights, setLocalFlights]     = useState(() => (settings.flights || []).map((f, i) => ({ ...f, _key: i })));
@@ -45,7 +46,8 @@ export default function SettingsTab({ settings, entries, isUnlocked, onUpdateSet
     setRawInputs((payoutSettings.payouts || []).map(v => String(v || 0)));
   }, [payoutSettings]);
 
-  useEffect(() => { setTournamentDate(settings.tournamentDate         || ''); }, [settings.tournamentDate]);
+  useEffect(() => { setTournamentDate(settings.tournamentDate               || ''); }, [settings.tournamentDate]);
+  useEffect(() => { setApplicationsOpenDate(settings.applicationsOpenDate   || ''); }, [settings.applicationsOpenDate]);
   useEffect(() => { setTournamentLocation(settings.tournamentLocation || ''); }, [settings.tournamentLocation]);
   useEffect(() => { setCheckInOpens(settings.checkInOpens             || '04:00'); }, [settings.checkInOpens]);
   useEffect(() => { setDefaultFlightSize(parseInt(settings.defaultFlightSize) || 30); }, [settings.defaultFlightSize]);
@@ -439,6 +441,24 @@ export default function SettingsTab({ settings, entries, isUnlocked, onUpdateSet
           {tournamentDate && (
             <p style={{ color: 'var(--header-bg)', fontSize: 12, marginTop: 10, textAlign: 'center' }}>
               {new Date(tournamentDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            </p>
+          )}
+          <div className="form-field" style={{ maxWidth: 220, marginTop: 14, margin: '14px auto 0' }}>
+            <label htmlFor="st-apps-open-date">Applications Open Date</label>
+            <input
+              id="st-apps-open-date"
+              name="applicationsOpenDate"
+              type="date"
+              value={applicationsOpenDate}
+              disabled={locked}
+              onChange={e => setApplicationsOpenDate(e.target.value)}
+              onBlur={() => onUpdateSettings({ applicationsOpenDate })}
+            />
+          </div>
+          {applicationsOpenDate && (
+            <p style={{ color: 'var(--header-bg)', fontSize: 12, marginTop: 6, textAlign: 'center' }}>
+              Public sign-up opens {new Date(applicationsOpenDate + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+              {tournamentDate && `, closes on tournament day`}
             </p>
           )}
           <div className="form-field" style={{ maxWidth: 360, marginTop: 14, margin: '14px auto 0' }}>

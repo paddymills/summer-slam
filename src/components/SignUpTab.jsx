@@ -53,6 +53,14 @@ function PublicSignUpView({ settings, entries = [], onEntriesRefresh }) {
   const [submitting, setSubmitting]   = useState(false);
   const [submitError, setSubmitError] = useState('');
 
+  const today = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })();
+  const openDate  = settings?.applicationsOpenDate;
+  const closeDate = settings?.tournamentDate;
+  const isNotYetOpen          = !!(openDate  && today < openDate);
+  const isClosedForTournament = !!(closeDate && today >= closeDate);
+  const signUpClosed = isNotYetOpen || isClosedForTournament;
+  const fmtDate = d => d ? new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '';
+
   function set(field, val) { setForm(prev => ({ ...prev, [field]: val })); }
 
   async function handleSubmitAndSign() {
@@ -105,6 +113,30 @@ function PublicSignUpView({ settings, entries = [], onEntriesRefresh }) {
     <div className="tab-panel active">
       <div className="tab-scroll">
         <div style={{ maxWidth: 520, margin: '0 auto', paddingTop: 16 }}>
+
+          {signUpClosed ? (
+            <div style={{ textAlign: 'center', padding: '48px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+              <div style={{ fontSize: 48 }}>{isNotYetOpen ? '📅' : '🔒'}</div>
+              <h2 style={{ color: 'var(--gold-light)', fontSize: 20, fontWeight: 800, margin: 0 }}>
+                {isNotYetOpen ? 'Applications Not Yet Open' : 'Applications Are Closed'}
+              </h2>
+              <p style={{ fontSize: 14, color: 'var(--header-bg)', margin: 0, lineHeight: 1.6, maxWidth: 380 }}>
+                {isNotYetOpen
+                  ? <>Online applications open on <strong style={{ color: 'var(--white)' }}>{fmtDate(openDate)}</strong>. Check back then to sign up.</>
+                  : <>Online applications are no longer being accepted. Contact tournament staff for assistance.</>
+                }
+              </p>
+              <button
+                type="button"
+                className="btn btn-outline"
+                style={{ fontSize: 14, marginTop: 8 }}
+                onClick={() => printBlankApplication(settings, {})}
+              >
+                🖨 Print Blank Application
+              </button>
+            </div>
+          ) : (
+          <>
           <div className="toolbar" style={{ marginBottom: 16, paddingLeft: 0, paddingRight: 0 }}>
             <h2 style={{ color: 'var(--gold-light)', fontSize: 18, fontWeight: 800 }}>📝 Entry Form</h2>
             <button
@@ -260,6 +292,8 @@ function PublicSignUpView({ settings, entries = [], onEntriesRefresh }) {
             </button>
 
           </form>
+          </>
+          )}
 
           {/* ── Find My Entry (digital self-sign) ── */}
           <div style={{ marginTop: 36, borderTop: '1px solid rgba(139,180,225,0.2)', paddingTop: 24 }}>

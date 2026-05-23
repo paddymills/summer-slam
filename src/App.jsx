@@ -26,8 +26,9 @@ import { useSettings, useSaveSettings } from './hooks/useSettings';
 import { useContacts, useUpdateContact, useDeleteContact, useUpsertContacts } from './hooks/useContacts';
 
 const DEFAULT_SETTINGS = {
-  tournamentDate:     '',
-  tournamentLocation: '',
+  tournamentDate:          '',
+  tournamentLocation:      '',
+  applicationsOpenDate:    '',
   fees:            { entryFee: 249, lunkerFee: 10, optFee: 20, option1Pct: 70 },
   payoutSettings:  {
     totalPayout: 10000,
