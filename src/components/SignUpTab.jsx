@@ -56,7 +56,8 @@ function PublicSignUpView({ settings, entries = [], onEntriesRefresh }) {
   const today = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })();
   const openDate  = settings?.applicationsOpenDate;
   const closeDate = settings?.tournamentDate;
-  const isNotYetOpen          = !!(openDate  && today < openDate);
+  // If a tournament date is configured: locked until openDate is set AND today >= openDate
+  const isNotYetOpen          = !!(closeDate && (!openDate || today < openDate));
   const isClosedForTournament = !!(closeDate && today >= closeDate);
   const signUpClosed = isNotYetOpen || isClosedForTournament;
   const fmtDate = d => d ? new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '';
