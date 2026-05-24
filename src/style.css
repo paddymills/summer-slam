@@ -922,7 +922,20 @@ body.light .locked-card { border-bottom-color: rgba(58,110,58,0.18); }
 }
 
 @media (max-width: 480px) {
-  .summary-grid-top { grid-template-columns: repeat(2, 1fr); }
+  .summary-grid-top { grid-template-columns: repeat(2, 1fr); margin-bottom: 6px !important; }
+
+  /* Shrink leaderboard title so chips reach the fold sooner */
+  .leaderboard-header { padding-top: 8px; margin-bottom: 10px; }
+  .leaderboard-header h2 { font-size: 18px; letter-spacing: 2px; }
+  .leaderboard-header p  { display: none; }
+
+  /* Compact summary chips */
+  .summary-chip { padding: 8px 10px; }
+  .summary-chip .sc-lbl  { font-size: 13px; margin-bottom: 2px; }
+  .summary-chip .sc-val  { font-size: 15px; }
+  .summary-chip .sc-boat { font-size: 13px; margin-top: 2px; }
+  .summary-chip .sc-name { font-size: 12px; }
+  .summary-chip .sc-co   { font-size: 11px; }
 
   .lb-card {
     grid-template-columns: 40px 44px 1fr;
