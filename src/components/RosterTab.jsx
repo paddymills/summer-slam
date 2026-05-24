@@ -733,10 +733,10 @@ export default function RosterTab({
       if (lockedSortBy === col) setLockedSortDesc(d => !d);
       else { setLockedSortBy(col); setLockedSortDesc(false); }
     }
-    function LockedSortTh({ col, label, style }) {
+    function LockedSortTh({ col, label, style, className }) {
       const active = lockedSortBy === col;
       return (
-        <th onClick={() => toggleLockedSort(col)}
+        <th onClick={() => toggleLockedSort(col)} className={className}
             style={{ cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap', textAlign: 'left', ...style }}>
           {label}
           <span style={{ marginLeft: 4, opacity: active ? 1 : 0.3, fontSize: 11 }}>
@@ -827,22 +827,22 @@ export default function RosterTab({
           />
         </div>
         <div className="table-wrapper">
-          <table style={{ tableLayout: 'fixed', minWidth: 675 }}>
+          <table className="locked-roster-table" style={{ tableLayout: 'fixed', minWidth: 675 }}>
             <colgroup>
               <col style={{ width: '110px' }} /><col style={{ width: '110px' }} />
-              <col style={{ width: '120px' }} /><col style={{ width: '120px' }} />
-              <col style={{ width: '60px' }} /><col style={{ width: '110px' }} />
-              <col style={{ width: '75px' }} />
+              <col className="lrt-hide-mobile" style={{ width: '120px' }} /><col className="lrt-hide-mobile" style={{ width: '120px' }} />
+              <col style={{ width: '60px' }} /><col className="lrt-hide-mobile" style={{ width: '110px' }} />
+              <col className="lrt-hide-mobile" style={{ width: '75px' }} />
             </colgroup>
             <thead>
               <tr>
                 <LockedSortTh col="boaterFirst"    label="Boater First" />
                 <LockedSortTh col="boaterLast"     label="Boater Last" />
-                <LockedSortTh col="coAnglerFirst"  label="Co-Angler First" />
-                <LockedSortTh col="coAnglerLast"   label="Co-Angler Last" />
+                <LockedSortTh col="coAnglerFirst"  label="Co-Angler First" className="lrt-hide-mobile" />
+                <LockedSortTh col="coAnglerLast"   label="Co-Angler Last"  className="lrt-hide-mobile" />
                 <LockedSortTh col="boatNo"         label="Boat #" style={{ textAlign: 'center' }} />
-                <LockedSortTh col="signedUpAt"     label="Signed Up" style={{ textAlign: 'center' }} />
-                <th style={{ textAlign: 'center' }}>Signed</th>
+                <LockedSortTh col="signedUpAt"     label="Signed Up" style={{ textAlign: 'center' }} className="lrt-hide-mobile" />
+                <th className="lrt-hide-mobile" style={{ textAlign: 'center' }}>Signed</th>
               </tr>
             </thead>
             <tbody>
@@ -855,11 +855,11 @@ export default function RosterTab({
                     {duplicateEntryIds.has(row.id) && <span title="Duplicate angler" style={{ marginLeft: 4, color: '#ffb450', fontWeight: 700 }}>!</span>}
                   </td>
                   <td className="td-name">{row.boaterLast}{row.boaterSuffix ? ` ${row.boaterSuffix}` : ''}</td>
-                  <td className="td-name">{row.coAnglerFirst}</td>
-                  <td className="td-name">{row.coAnglerLast}{row.coAnglerSuffix ? ` ${row.coAnglerSuffix}` : ''}</td>
+                  <td className="td-name lrt-hide-mobile">{row.coAnglerFirst}</td>
+                  <td className="td-name lrt-hide-mobile">{row.coAnglerLast}{row.coAnglerSuffix ? ` ${row.coAnglerSuffix}` : ''}</td>
                   <td style={{ textAlign: 'center', fontWeight: 700, color: row.boatNo ? 'var(--gold-light)' : 'var(--header-bg)' }}>{row.boatNo || '—'}</td>
-                  <td style={{ textAlign: 'center', fontSize: 11, color: 'var(--header-bg)', whiteSpace: 'nowrap' }}>{fmtSignedUp(row.signedUpAt)}</td>
-                  <td style={{ textAlign: 'center', fontSize: 12, fontWeight: 700, color: '#4CAF50' }}>
+                  <td className="lrt-hide-mobile" style={{ textAlign: 'center', fontSize: 11, color: 'var(--header-bg)', whiteSpace: 'nowrap' }}>{fmtSignedUp(row.signedUpAt)}</td>
+                  <td className="lrt-hide-mobile" style={{ textAlign: 'center', fontSize: 12, fontWeight: 700, color: '#4CAF50' }}>
                     ✓ Signed
                   </td>
                 </tr>

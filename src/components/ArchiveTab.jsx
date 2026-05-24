@@ -126,33 +126,33 @@ export default function ArchiveTab({ isUnlocked, rosterCount, onLoadArchive, set
             <div style={{ textAlign: 'center', padding: 40, color: 'var(--header-bg)' }}>Loading…</div>
           ) : (
             <div className="table-wrapper">
-              <table className="roster-table" style={{ tableLayout: 'fixed', minWidth: 760 }}>
+              <table className="roster-table archive-roster-table" style={{ tableLayout: 'fixed', minWidth: 760 }}>
                 <colgroup>
                   <col style={{ width: 60 }} />
                   <col />
                   <col />
-                  <col />
-                  <col />
-                  <col style={{ width: 72 }} />
-                  <col style={{ width: 96 }} />
-                  <col style={{ width: 64 }} />
+                  <col className="art-hide-mobile" />
+                  <col className="art-hide-mobile" />
+                  <col className="art-hide-mobile" style={{ width: 72 }} />
+                  <col className="art-hide-mobile" style={{ width: 96 }} />
+                  <col className="art-hide-mobile" style={{ width: 64 }} />
                   <col style={{ width: 110 }} />
-                  {isAdmin && <col style={{ width: 80 }} />}
-                  <col style={{ width: 80 }} />
+                  {isAdmin && <col className="art-hide-mobile" style={{ width: 80 }} />}
+                  <col className="art-hide-mobile" style={{ width: 80 }} />
                 </colgroup>
                 <thead>
                   <tr>
                     <th style={{ textAlign: 'left' }}>Place</th>
                     <th style={{ textAlign: 'left' }}>Boater First</th>
                     <th style={{ textAlign: 'left' }}>Boater Last</th>
-                    <th style={{ textAlign: 'left' }}>Co-Angler First</th>
-                    <th style={{ textAlign: 'left' }}>Co-Angler Last</th>
-                    <th style={{ textAlign: 'left' }}>Boat #</th>
-                    <th style={{ textAlign: 'right' }}>Lunker (lbs)</th>
-                    <th style={{ textAlign: 'center' }}># Fish</th>
+                    <th className="art-hide-mobile" style={{ textAlign: 'left' }}>Co-Angler First</th>
+                    <th className="art-hide-mobile" style={{ textAlign: 'left' }}>Co-Angler Last</th>
+                    <th className="art-hide-mobile" style={{ textAlign: 'left' }}>Boat #</th>
+                    <th className="art-hide-mobile" style={{ textAlign: 'right' }}>Lunker (lbs)</th>
+                    <th className="art-hide-mobile" style={{ textAlign: 'center' }}># Fish</th>
                     <th style={{ textAlign: 'right' }}>Total Wt (lbs)</th>
-                    {isAdmin && <th style={{ textAlign: 'right' }}>Buy-In</th>}
-                    <th style={{ textAlign: 'center' }}>Waiver</th>
+                    {isAdmin && <th className="art-hide-mobile" style={{ textAlign: 'right' }}>Buy-In</th>}
+                    <th className="art-hide-mobile" style={{ textAlign: 'center' }}>Waiver</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -165,13 +165,13 @@ export default function ArchiveTab({ isUnlocked, rosterCount, onLoadArchive, set
                         <td className={`rank-cell ${rankClass}`}>{rank ?? ''}</td>
                         <td className="td-name">{row.boaterFirst}</td>
                         <td className="td-name">{row.boaterLast}</td>
-                        <td className="td-name">{row.coAnglerFirst}</td>
-                        <td className="td-name">{row.coAnglerLast}</td>
-                        <td style={{ padding: '8px 12px' }}>{row.boatNo}</td>
-                        <td style={{ textAlign: 'right', fontWeight: 600 }}>
+                        <td className="td-name art-hide-mobile">{row.coAnglerFirst}</td>
+                        <td className="td-name art-hide-mobile">{row.coAnglerLast}</td>
+                        <td className="art-hide-mobile" style={{ padding: '8px 12px' }}>{row.boatNo}</td>
+                        <td className="art-hide-mobile" style={{ textAlign: 'right', fontWeight: 600 }}>
                           {parseFloat(row.lunkerWeight) > 0 ? parseFloat(row.lunkerWeight).toFixed(2) : '—'}
                         </td>
-                        <td style={{ textAlign: 'center' }}>
+                        <td className="art-hide-mobile" style={{ textAlign: 'center' }}>
                           {row.numFish > 0 ? row.numFish : '—'}
                         </td>
                         <td style={{ textAlign: 'right', fontWeight: 700, color: '#e8c876' }}>
@@ -185,11 +185,11 @@ export default function ArchiveTab({ isUnlocked, rosterCount, onLoadArchive, set
                           </span>
                         </td>
                         {isAdmin && (
-                          <td style={{ textAlign: 'right', padding: '8px 12px' }}>
+                          <td className="art-hide-mobile" style={{ textAlign: 'right', padding: '8px 12px' }}>
                             {row.buyIn > 0 ? `$${Number(row.buyIn).toFixed(2)}` : '—'}
                           </td>
                         )}
-                        <td style={{ textAlign: 'center', padding: '6px 8px' }}>
+                        <td className="art-hide-mobile" style={{ textAlign: 'center', padding: '6px 8px' }}>
                           {hasSig ? (
                             <button
                               className="btn btn-outline btn-sm"

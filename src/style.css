@@ -843,6 +843,25 @@ tbody td.td-name { white-space: nowrap; text-overflow: ellipsis; }
   .summary-chip .sc-co   { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 }
 
+/* ── MOBILE TABLE COLUMN HIDING ── */
+@media (max-width: 600px) {
+  /* Locked public roster: show only Boater First, Boater Last, Boat # */
+  .locked-roster-table {
+    table-layout: auto !important;
+    min-width: unset !important;
+    font-size: 13px;
+  }
+  .locked-roster-table .lrt-hide-mobile { display: none; }
+
+  /* Archive results: show only Place, Boater First, Boater Last, Total Wt */
+  .archive-roster-table {
+    table-layout: auto !important;
+    min-width: unset !important;
+    font-size: 13px;
+  }
+  .archive-roster-table .art-hide-mobile { display: none; }
+}
+
 @media (max-width: 480px) {
   .summary-grid-top { grid-template-columns: repeat(2, 1fr); }
 
