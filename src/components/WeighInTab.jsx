@@ -73,6 +73,15 @@ export default function WeighInTab({ entries, settings, onWeighIn, onAddEntry, o
     const tw = parseFloat(entry.totalWeight) || 0;
     const nf = parseInt(entry.numFish) || 0;
     const name = [entry.boaterFirst, entry.boaterLast].filter(Boolean).join(' ');
+    if (entry._isDNS) {
+      setStatus({ type: 'dns', message: `Boat #${no} (${name}) is DNS — they must check in before weighing.` });
+      return;
+    }
+    if (entry._isDQ) {
+      const dqMsg = `⚠️ DQ — Boat #${no} (${name}) was ${entry._minsLate} min late. Weight will not count toward standings.${tw > 0 || nf > 0 ? ` Already has ${nf} fish / ${tw.toFixed(2)} lbs — submitting will overwrite.` : ''}`;
+      setStatus({ type: 'dq', message: dqMsg, entry });
+      return;
+    }
     if (tw > 0 || nf > 0) {
       setStatus({
         type: 'warning',
@@ -118,6 +127,11 @@ export default function WeighInTab({ entries, settings, onWeighIn, onAddEntry, o
         boatRef.current?.focus();
         return;
       }
+    }
+    if (entry?._isDNS) {
+      setStatus({ type: 'dns', message: `Boat #${no} is DNS — they must check in before weighing.` });
+      boatRef.current?.focus();
+      return;
     }
 
     const lw = parseFloat(lunkerWeight) || 0;
@@ -177,7 +191,7 @@ export default function WeighInTab({ entries, settings, onWeighIn, onAddEntry, o
     fishRef.current?.focus();
   }
 
-  const statusColors = { ok: '#4CAF50', warning: '#ffb450', error: '#ff6b6b', notfound: '#ff6b6b', adding: '#ffb450' };
+  const statusColors = { ok: '#4CAF50', warning: '#ffb450', error: '#ff6b6b', notfound: '#ff6b6b', adding: '#ffb450', dq: '#ff9090', dns: '#ff6b6b' };
   const hasPenalty = pen.total > 0;
 
   return (
@@ -208,14 +222,14 @@ export default function WeighInTab({ entries, settings, onWeighIn, onAddEntry, o
         {/* Status banner */}
         {status && (
           <div style={{
-            background: ['ok'].includes(status.type) ? 'rgba(76,175,80,0.12)' : ['warning','adding'].includes(status.type) ? 'rgba(255,180,80,0.12)' : 'rgba(255,107,107,0.12)',
+            background: ['ok'].includes(status.type) ? 'rgba(76,175,80,0.12)' : ['warning','adding','dq'].includes(status.type) ? 'rgba(255,107,107,0.08)' : 'rgba(255,107,107,0.12)',
             border: `1px solid ${statusColors[status.type]}44`,
             borderLeft: `4px solid ${statusColors[status.type]}`,
             borderRadius: 8, padding: '10px 14px', fontSize: 13,
             color: statusColors[status.type], fontWeight: 600,
           }}>
             <div>
-              {status.type === 'warning' ? '⚠️ ' : status.type === 'error' || status.type === 'notfound' ? '✖ ' : status.type === 'adding' ? '⚠️ ' : '✔ '}
+              {status.type === 'warning' ? '⚠️ ' : status.type === 'dq' ? '🚫 ' : status.type === 'dns' ? '✖ ' : status.type === 'error' || status.type === 'notfound' ? '✖ ' : status.type === 'adding' ? '⚠️ ' : '✔ '}
               {status.message}
             </div>
             {status.type === 'notfound' && (
@@ -241,6 +255,21 @@ export default function WeighInTab({ entries, settings, onWeighIn, onAddEntry, o
             {status.type === 'warning' && overwriteConfirmed && (
               <div style={{ marginTop: 6, fontSize: 12, color: '#4CAF50', fontWeight: 700 }}>
                 ✔ Overwrite confirmed — fill in data and save
+              </div>
+            )}
+            {status.type === 'dq' && !overwriteConfirmed && (
+              <button
+                type="button"
+                className="btn btn-outline btn-sm"
+                onClick={() => setOverwriteConfirmed(true)}
+                style={{ marginTop: 8, borderColor: '#ff9090', color: '#ff9090' }}
+              >
+                ✔ Understood — weigh in anyway (weight won't count)
+              </button>
+            )}
+            {status.type === 'dq' && overwriteConfirmed && (
+              <div style={{ marginTop: 6, fontSize: 12, color: '#ffb450', fontWeight: 700 }}>
+                ⚠️ DQ confirmed — recording weight for records only
               </div>
             )}
           </div>
@@ -331,7 +360,7 @@ export default function WeighInTab({ entries, settings, onWeighIn, onAddEntry, o
         {/* Actions */}
         <div style={{ display: 'flex', gap: 10 }}>
           <button type="submit" className="btn btn-primary"
-            disabled={submitting || !boatNo.trim() || (status?.type === 'warning' && !overwriteConfirmed)}
+            disabled={submitting || !boatNo.trim() || status?.type === 'dns' || ((status?.type === 'warning' || status?.type === 'dq') && !overwriteConfirmed)}
             style={{ flex: 1, fontSize: 16, padding: '12px 0' }}>
             {submitting ? 'Saving…' : '✔ Save & Next'}
           </button>

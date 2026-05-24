@@ -762,7 +762,7 @@ const saveSettingsMut   = useSaveSettings();
             </div>
             {everAdmin && (
               <div style={{ display: activeTab === 'weighin' ? 'contents' : 'none' }}>
-                <WeighInTab entries={rawEntries} settings={settingsWithTheme} onWeighIn={handleWeighIn} onAddEntry={handleAddWeighInEntry}
+                <WeighInTab entries={rankedEntries} settings={settingsWithTheme} onWeighIn={handleWeighIn} onAddEntry={handleAddWeighInEntry}
                   onSetCurrentlyWeighing={payload => handleUpdateSettings({ currentlyWeighing: payload })} />
               </div>
             )}

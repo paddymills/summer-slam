@@ -112,6 +112,7 @@ export default function RosterTab({
   const [actionsPos, setActionsPos]   = useState({ top: 0, right: 0, bottom: 'auto' });
   const [drawModal, setDrawModal]     = useState(false);
   const [drawBusy, setDrawBusy]       = useState(false);
+  const [opBuyInEdit, setOpBuyInEdit] = useState(null);
   const tableContainerRef = useRef(null);
   const actionsRef        = useRef(null);
 
@@ -257,23 +258,27 @@ export default function RosterTab({
         id: 'boaterFirst', accessorKey: 'boaterFirst', header: 'Boater First', size: COL_WIDTHS.boaterFirst,
         sortingFn: stringSort,
         meta: { tdClassName: 'td-name' },
-        cell: ({ row: { original: r } }) => (
-          <>
-            {r.needsAttention && (
-              r.appSigned !== 1
-                ? <span title="Self-submitted — needs operator verification" style={{ fontSize: 9, background: 'rgba(255,180,80,0.2)', color: '#ffb450', borderRadius: 3, padding: '1px 5px', fontWeight: 700, marginRight: 5, verticalAlign: 'middle', whiteSpace: 'nowrap' }}>Self-sub</span>
-                : <span style={{ color: '#ffb450', marginRight: 4 }}>⚠️</span>
-            )}
-            {r.boaterFirst}
-            {duplicateEntryIds.has(r.id) && (
-              <span
-                title="Duplicate angler — click to merge"
-                style={{ marginLeft: 4, color: '#ffb450', fontWeight: 700, cursor: isUnlocked ? 'pointer' : undefined }}
-                onClick={isUnlocked ? e => { e.stopPropagation(); onOpenMerge?.(r); } : undefined}
-              >!</span>
-            )}
-          </>
-        ),
+        cell: ({ row: { original: r } }) => {
+          const isDNS = !!r.boatNo && !r.checkedInAt;
+          return (
+            <>
+              {r.needsAttention && (
+                r.appSigned !== 1
+                  ? <span title="Self-submitted — needs operator verification" style={{ fontSize: 9, background: 'rgba(255,180,80,0.2)', color: '#ffb450', borderRadius: 3, padding: '1px 5px', fontWeight: 700, marginRight: 5, verticalAlign: 'middle', whiteSpace: 'nowrap' }}>Self-sub</span>
+                  : <span style={{ color: '#ffb450', marginRight: 4 }}>⚠️</span>
+              )}
+              {r.boaterFirst}
+              {isDNS && <span title="Did Not Start — boat assigned but never checked in" style={{ marginLeft: 4, fontSize: 10, background: 'rgba(180,180,180,0.15)', color: '#aaa', borderRadius: 3, padding: '1px 4px', fontWeight: 700 }}>DNS</span>}
+              {duplicateEntryIds.has(r.id) && (
+                <span
+                  title="Duplicate angler — click to merge"
+                  style={{ marginLeft: 4, color: '#ffb450', fontWeight: 700, cursor: isUnlocked ? 'pointer' : undefined }}
+                  onClick={isUnlocked ? e => { e.stopPropagation(); onOpenMerge?.(r); } : undefined}
+                >!</span>
+              )}
+            </>
+          );
+        },
       },
       {
         id: 'boaterLast', accessorKey: 'boaterLast', header: 'Boater Last', size: COL_WIDTHS.boaterLast,
@@ -662,8 +667,21 @@ export default function RosterTab({
                     <td style={{ textAlign: 'center', fontWeight: 700, color: row.boatNo ? 'var(--gold-light)' : 'var(--header-bg)' }}>{row.boatNo || '—'}</td>
                     <td style={{ textAlign: 'center' }}><StatusCell val={row.lunker} /></td>
                     <td style={{ textAlign: 'center' }}><StatusCell val={row.option} /></td>
-                    <td style={{ textAlign: 'right', fontWeight: 600 }}>
-                      {parseFloat(row.buyIn) > 0 ? `$${parseFloat(row.buyIn).toFixed(2)}` : '—'}
+                    <td style={{ textAlign: 'right', fontWeight: 600, cursor: 'pointer' }}
+                        onClick={e => { e.stopPropagation(); setOpBuyInEdit({ id: row.id, val: parseFloat(row.buyIn) > 0 ? String(parseFloat(row.buyIn).toFixed(2)) : '' }); }}>
+                      {opBuyInEdit?.id === row.id ? (
+                        <input
+                          type="text" inputMode="decimal" autoFocus
+                          value={opBuyInEdit.val}
+                          onClick={e => e.stopPropagation()}
+                          onChange={e => setOpBuyInEdit(v => ({ ...v, val: e.target.value }))}
+                          onBlur={() => { const n = parseFloat(opBuyInEdit.val); if (!isNaN(n)) onUpdateInlineField?.(row.id, 'buyIn', parseFloat(n.toFixed(2))); setOpBuyInEdit(null); }}
+                          onKeyDown={e => { if (e.key === 'Enter') e.target.blur(); if (e.key === 'Escape') setOpBuyInEdit(null); }}
+                          style={{ width: 70, textAlign: 'right', background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(139,180,225,0.4)', borderRadius: 4, color: 'inherit', fontSize: 12, padding: '2px 4px' }}
+                        />
+                      ) : (
+                        <span title="Click to edit buy-in">{parseFloat(row.buyIn) > 0 ? `$${parseFloat(row.buyIn).toFixed(2)}` : <span style={{ color: 'var(--header-bg)' }}>tap $</span>}</span>
+                      )}
                     </td>
                     <td style={{ textAlign: 'center' }}>
                       {offWater[row.id]
