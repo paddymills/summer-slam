@@ -76,7 +76,7 @@ rosterFilterFn.autoRemove = v => !v?.text && (!v?.regFilter || v.regFilter === '
 // ---------------------------------------------------------------------------
 
 const COL_WIDTHS = {
-  _rank: 52, boaterFirst: 100, boaterLast: 100, coAnglerFirst: 100, coAnglerLast: 100,
+  _rank: 52, boaterFirst: 100, boaterLast: 100, coAnglerFirst: 125, coAnglerLast: 125,
   boatNo: 68, numFish: 58, lunkerWeight: 90, totalWeight: 110,
   lunker: 68, option: 68, paid: 58, appSigned: 90, offWater: 82, buyIn: 82, actions: 150,
   signedUpAt: 130,
@@ -623,7 +623,7 @@ export default function RosterTab({
           <table style={{ tableLayout: 'fixed', minWidth: 930 }}>
             <colgroup>
               <col style={{ width: '115px' }} /><col style={{ width: '115px' }} />
-              <col style={{ width: '110px' }} /><col style={{ width: '110px' }} />
+              <col style={{ width: '125px' }} /><col style={{ width: '125px' }} />
               <col style={{ width: '58px' }} />
               <col style={{ width: '65px' }} /><col style={{ width: '65px' }} />
               <col style={{ width: '72px' }} />
@@ -811,7 +811,7 @@ export default function RosterTab({
           <table style={{ tableLayout: 'fixed', minWidth: 675 }}>
             <colgroup>
               <col style={{ width: '110px' }} /><col style={{ width: '110px' }} />
-              <col style={{ width: '100px' }} /><col style={{ width: '100px' }} />
+              <col style={{ width: '120px' }} /><col style={{ width: '120px' }} />
               <col style={{ width: '60px' }} /><col style={{ width: '110px' }} />
               <col style={{ width: '75px' }} />
             </colgroup>

@@ -938,6 +938,8 @@ body.light .cell-neutral { background: #e0e0e0; color: #333333; }
 
 /* Buttons */
 body.light .btn-outline       { background: #ffffff; color: #1a5c28; border: 1.5px solid #3a6e3a; }
+body.light .btn-gold          { background: #1a5c28; color: #ffffff; }
+body.light .btn-gold:hover    { background: #256b34; }
 body.light .btn-outline:hover { background: #e6f2e6; color: #0d3d1a; }
 body.light .btn-primary       { background: #1a5c28; color: #ffffff; }
 body.light .btn-primary:hover { background: #0d3d1a; }
@@ -1003,7 +1005,7 @@ body.light .nav-tab.active   { color: #ffe08a; border-bottom-color: #ffe08a; }
 body.light .logo-text h1     { color: #ffe08a; }
 
 /* Edit modal */
-body.light .edit-panel             { background: #ffffff; border: 2px solid #1a5c28; }
+body.light .edit-panel             { background: #ffffff; border: 2px solid #1a5c28; color: #0a120a; }
 body.light .form-field label, body.light .form-field .field-label { color: #1a5c28; font-weight: 700; }
 body.light .form-field input,
 body.light .form-field select      {
