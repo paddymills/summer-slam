@@ -11,7 +11,7 @@ export default function LeaderboardTab({ entries, settings }) {
   const totalWeight = lbEntries.reduce((s, e) => s + (parseFloat(e.totalWeight) || 0), 0).toFixed(2);
 
 
-  const lunkerRows = entries.filter(r => r.lunker === 1 && r.boatNo && r.checkedInAt && parseFloat(r.lunkerWeight) > 0);
+  const lunkerRows = entries.filter(r => r.lunker === 1 && r.boatNo && r.checkedInAt && !r._isDQ && parseFloat(r.lunkerWeight) > 0);
   const lunkerRow = lunkerRows.length
     ? lunkerRows.reduce((best, r) => parseFloat(r.lunkerWeight) > parseFloat(best.lunkerWeight) ? r : best)
     : null;
