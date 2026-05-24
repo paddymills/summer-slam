@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { upsertContacts, fetchContacts } from '../utils/api';
 import { formatPhone } from '../utils/phone';
+import { useConfirm } from '../hooks/useConfirm';
 
 const FIELD_STYLE = {
-  background: 'rgba(255,255,255,0.06)',
-  border: '1px solid rgba(139,180,225,0.3)',
+  background: 'var(--input-bg)',
+  border: '1px solid var(--input-border-color)',
   borderRadius: 8,
   color: 'var(--white)',
   fontSize: 16,
@@ -256,6 +257,7 @@ export default function ContactsTab({ isUnlocked, contacts, contactsLoading, onC
   const [importStatus, setImportStatus] = useState(null); // { type: 'loading'|'success'|'error', msg }
   const [showDuplicates, setShowDuplicates] = useState(false);
   const fileInputRef = useRef(null);
+  const { confirm: showConfirm, confirmDialog } = useConfirm();
 
   const dupGroups = useMemo(() => {
     const map = {};
@@ -312,7 +314,7 @@ export default function ContactsTab({ isUnlocked, contacts, contactsLoading, onC
   }
 
   async function handleDelete(id, name) {
-    if (!confirm(`Remove ${name} from contacts?`)) return;
+    if (!(await showConfirm(`Remove ${name} from contacts?`, { confirmLabel: 'Remove', danger: true }))) return;
     try {
       await deleteContact(id);
       onContactsChange(prev => prev.filter(c => c.id !== id));
@@ -531,6 +533,7 @@ export default function ContactsTab({ isUnlocked, contacts, contactsLoading, onC
           onClose={() => setShowDuplicates(false)}
         />
       )}
+      {confirmDialog}
     </div>
   );
 }

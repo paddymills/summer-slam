@@ -8,6 +8,12 @@ function getDb(env) {
   });
 }
 
+function toTitleCase(s) {
+  return (s ?? '').trim().split(/\s+/)
+    .map(w => w.split('-').map(p => p ? p.charAt(0).toUpperCase() + p.slice(1).toLowerCase() : '').join('-'))
+    .join(' ');
+}
+
 function toJS(row, hidePI = false) {
   return {
     id:             Number(row.id),
@@ -102,8 +108,8 @@ export async function onRequestPost({ request, env }) {
                  signed_up_at, updated_at)
               VALUES (?,?,?,?,?, ?,?,?,?,?, ?,?, '',0,0,0, 0,0,0,0,0, null,0,0,1, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
         args: [
-          t(body.boaterFirst), t(body.boaterLast), t(body.boaterSuffix ?? ''), t(body.boaterPhone ?? ''), t(body.boaterEmail ?? ''),
-          t(body.coAnglerFirst ?? ''), t(body.coAnglerLast ?? ''), t(body.coAnglerSuffix ?? ''), t(body.coAnglerPhone ?? ''), t(body.coAnglerEmail ?? ''),
+          toTitleCase(body.boaterFirst), toTitleCase(body.boaterLast), t(body.boaterSuffix ?? ''), t(body.boaterPhone ?? ''), t(body.boaterEmail ?? ''),
+          toTitleCase(body.coAnglerFirst ?? ''), toTitleCase(body.coAnglerLast ?? ''), t(body.coAnglerSuffix ?? ''), t(body.coAnglerPhone ?? ''), t(body.coAnglerEmail ?? ''),
           t(body.boaterOrderNo ?? ''), t(body.coAnglerOrderNo ?? ''),
         ],
       });
@@ -128,8 +134,8 @@ export async function onRequestPost({ request, env }) {
                boater_order_no, co_angler_order_no, signed_up_at, updated_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
       args: [
-        t(body.boaterFirst),   t(body.boaterLast),   t(body.boaterSuffix ?? ''),   t(body.boaterPhone),   t(body.boaterEmail),
-        t(body.coAnglerFirst), t(body.coAnglerLast), t(body.coAnglerSuffix ?? ''), t(body.coAnglerPhone), t(body.coAnglerEmail),
+        toTitleCase(body.boaterFirst),   toTitleCase(body.boaterLast),   t(body.boaterSuffix ?? ''),   t(body.boaterPhone),   t(body.boaterEmail),
+        toTitleCase(body.coAnglerFirst), toTitleCase(body.coAnglerLast), t(body.coAnglerSuffix ?? ''), t(body.coAnglerPhone), t(body.coAnglerEmail),
         t(body.boatNo),
         Number(body.numFish)      || 0,
         Number(body.lunkerWeight) || 0,

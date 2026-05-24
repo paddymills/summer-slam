@@ -111,7 +111,12 @@ export function exportRosterPdf(entries, settings, contacts = [], winners = []) 
     : null;
 
   const registered    = entries.filter(e => isOn(e.paid) && isOn(e.appSigned));
-  const checkedIn     = entries.filter(e => e.boatNo);
+  const checkedIn     = entries.filter(e => e.boatNo && e.checkedInAt);
+  const dnsEntries    = entries.filter(e => e.boatNo && !e.checkedInAt);
+  const tDateStr      = settings.tournamentDate || '';
+  const dayOfEntries  = tDateStr
+    ? entries.filter(e => e.signedUpAt && e.signedUpAt.slice(0, 10) >= tDateStr)
+    : [];
   const weighed       = entries.filter(e => e.boatNo && parseFloat(e.totalWeight) > 0);
   const hasWeightData = weighed.length > 0;
 
@@ -265,6 +270,8 @@ export function exportRosterPdf(entries, settings, contacts = [], winners = []) 
     statCell(registered.length,   'Registered Teams'),
     statCell(individuals,         'Individuals'),
     statCell(checkedIn.length,    'Checked In'),
+    statCell(dnsEntries.length,   'DNS'),
+    ...(dayOfEntries.length > 0 ? [statCell(dayOfEntries.length, 'Day-Of Sign-Ups')] : []),
     statCell(`$${totalBuyIn.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'Total Buy-In'),
     statCell(`$${lunkerPot.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'Lunker Pot'),
     statCell(`$${optionPot.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, 'Option Pot'),
@@ -444,6 +451,17 @@ export function exportRosterPdf(entries, settings, contacts = [], winners = []) 
   ${sectionHead(`First-Time Anglers — ${firstTimeNames.length}`)}
   <div style="columns:2;column-gap:32px;font-size:11px">
     ${firstTimeNames.map(n => `<div style="padding:3px 0;border-bottom:1px solid #eee;break-inside:avoid">${n}</div>`).join('')}
+  </div>` : ''}
+
+  <!-- Day-Of Sign-Ups -->
+  ${dayOfEntries.length > 0 ? `
+  ${sectionHead(`Day-Of Sign-Ups — ${dayOfEntries.length}`)}
+  <div style="columns:2;column-gap:32px;font-size:11px">
+    ${[...dayOfEntries].sort((a, b) => (a.boaterLast || '').localeCompare(b.boaterLast || '')).map(e => {
+      const name = [e.boaterFirst, e.boaterLast, e.boaterSuffix].filter(Boolean).join(' ') || '—';
+      const boat = e.boatNo ? ` <span style="color:#888;font-size:10px">#${e.boatNo}</span>` : '';
+      return `<div style="padding:3px 0;border-bottom:1px solid #eee;break-inside:avoid">${name}${boat}</div>`;
+    }).join('')}
   </div>` : ''}
 
   <!-- Catch Performance -->

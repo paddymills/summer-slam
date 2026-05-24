@@ -22,6 +22,10 @@ body {
   --card-shadow: 0 2px 12px rgba(0,0,0,0.3);
   --header-text: #f0ede6;
   --settings-panel-bg: rgba(255,255,255,0.05);
+  --input-bg:        rgba(255,255,255,0.06);
+  --input-border-color: rgba(139,180,225,0.3);
+  --card-bg:         rgba(255,255,255,0.05);
+  --card-border:     rgba(139,180,225,0.2);
   font-family: 'Segoe UI', system-ui, sans-serif;
   background: var(--navy);
   color: var(--white);
@@ -894,6 +898,10 @@ body.light {
   --text-muted: #2d5a2d;
   --card-shadow: 0 2px 8px rgba(0,0,0,0.18);
   --settings-panel-bg: #ffffff;
+  --input-bg:           #f5faf5;
+  --input-border-color: #3a6e3a;
+  --card-bg:            rgba(0,0,0,0.03);
+  --card-border:        rgba(58,110,58,0.25);
 }
 
 body.light header         { background: linear-gradient(rgba(22,61,32,0.78), rgba(22,61,32,0.78)), url('/header.jpg') left top/contain no-repeat #163d20; }
@@ -1008,6 +1016,10 @@ body.light .form-field select:focus { border-color: #1a5c28; background: #ffffff
 body.light .edit-panel-header h3   { color: #5c3c00; }
 body.light .edit-panel-close       { background: #e6f2e6; border-color: #3a6e3a; color: #1a5c28; }
 body.light .edit-section-label     { color: #1a5c28; border-bottom-color: #3a6e3a; font-size: 11px; }
+body.light .toast.success { background: #d4edda; border-color: #2d7a3a; color: #155724; }
+body.light .toast.error   { background: #f8d7da; border-color: #c0392b; color: #6b1219; }
+body.light .toast.info    { background: #e8f4e8; border-color: #3a6e3a; color: #1a5c28; }
+body.light .toast.warning { background: #fff3cd; border-color: #c07000; color: #5a3a00; }
 @media (max-width: 600px) {
   body.light .contacts-table tr { border-color: #3a6e3a; background: rgba(255,255,255,0.5); }
   body.light .contacts-table tr:hover { background: rgba(255,255,255,0.7); }

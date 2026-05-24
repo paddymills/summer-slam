@@ -285,20 +285,12 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
         ? (prefillSigs?.coAngler?.signature ?? captureSig(coAnglerCanvasRef.current))
         : null;
 
-      if (!prefillSigs?.boater?.signature) {
-        let boaterCid = boaterContactId;
-        if (!boaterCid) boaterCid = await lookupContactId(entry.boaterFirst, entry.boaterLast, effectiveBoaterPhone);
-        if (boaterCid) await saveContactWaiver(boaterCid, { signature: boaterSigUrl, signedAt: now, waiverYear: year, waiverSnapshot: snapshot, waiverHtml });
-      }
-      if (hasCoAngler && !prefillSigs?.coAngler?.signature) {
-        let coaCid = coAnglerContactId;
-        if (!coaCid) coaCid = await lookupContactId(entry.coAnglerFirst, entry.coAnglerLast, effectiveCoAnglerPhone);
-        if (coaCid) await saveContactWaiver(coaCid, { signature: coaSigUrl, signedAt: now, waiverYear: year, waiverSnapshot: snapshot, waiverHtml });
-      }
-
       const result = { appSigned: 1, buyIn: existingBuyIn, lunker: entry.lunker || 0, option: entry.option || 0, paid: keepPaid };
-      setSubmittedSigs({ boater: boaterSigUrl, coAngler: coaSigUrl, result, feePending: keepPaid === 0 });
-      setSubmitted(true);
+      await resolveContacts({
+        boaterInfo: { cid: boaterContactId, first: entry.boaterFirst, last: entry.boaterLast, phone: effectiveBoaterPhone, email: entry.boaterEmail, prefilled: !!prefillSigs?.boater?.signature },
+        coaInfo: hasCoAngler ? { cid: coAnglerContactId, first: entry.coAnglerFirst, last: entry.coAnglerLast, phone: effectiveCoAnglerPhone, email: entry.coAnglerEmail, prefilled: !!prefillSigs?.coAngler?.signature } : null,
+        boaterSigUrl, coaSigUrl, waiverHtml, now, snapshot, result, feePending: keepPaid === 0,
+      });
     } catch (e) {
       setError(e.message || 'Failed to save. Please try again.');
     } finally {
@@ -339,7 +331,7 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
     }
   }
 
-  async function resolveContacts({ boaterInfo, coaInfo, boaterSigUrl, coaSigUrl, waiverHtml, now, snapshot, result }) {
+  async function resolveContacts({ boaterInfo, coaInfo, boaterSigUrl, coaSigUrl, waiverHtml, now, snapshot, result, feePending = false }) {
     const anglers = [
       { ...boaterInfo, role: 'boater', sigUrl: boaterSigUrl },
       ...(coaInfo ? [{ ...coaInfo, role: 'coAngler', sigUrl: coaSigUrl }] : []),
@@ -383,16 +375,16 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
     }
 
     if (warnings.length > 0) {
-      setNearDupPrompt({ warnings, idx: 0, decisions: {}, saveData: { boaterSigUrl, coaSigUrl, waiverHtml, now, snapshot }, result });
+      setNearDupPrompt({ warnings, idx: 0, decisions: {}, saveData: { boaterSigUrl, coaSigUrl, waiverHtml, now, snapshot }, result, feePending });
       return;
     }
 
-    setSubmittedSigs({ boater: boaterSigUrl, coAngler: coaSigUrl, result });
+    setSubmittedSigs({ boater: boaterSigUrl, coAngler: coaSigUrl, result, feePending });
     setSubmitted(true);
   }
 
   async function handleNearDupDecision(useExisting) {
-    const { warnings, idx, decisions, saveData, result } = nearDupPrompt;
+    const { warnings, idx, decisions, saveData, result, feePending } = nearDupPrompt;
     const newDecisions = { ...decisions, [idx]: useExisting ? 'existing' : 'new' };
 
     if (idx + 1 < warnings.length) {
@@ -415,7 +407,7 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
           }
         } catch (_) {}
       }
-      setSubmittedSigs({ boater: saveData.boaterSigUrl, coAngler: saveData.coaSigUrl, result });
+      setSubmittedSigs({ boater: saveData.boaterSigUrl, coAngler: saveData.coaSigUrl, result, feePending });
       setSubmitted(true);
     } finally {
       setSubmitting(false);

@@ -8,6 +8,12 @@ function getDb(env) {
   });
 }
 
+function toTitleCase(s) {
+  return (s ?? '').trim().split(/\s+/)
+    .map(w => w.split('-').map(p => p ? p.charAt(0).toUpperCase() + p.slice(1).toLowerCase() : '').join('-'))
+    .join(' ');
+}
+
 function toJS(row) {
   return {
     id:             Number(row.id),
@@ -83,8 +89,8 @@ export async function onRequestPut({ params, request, env }) {
               updated_at   = CURRENT_TIMESTAMP
             WHERE id=? AND (? IS NULL OR updated_at = ?)`,
       args: [
-        t(body.boaterFirst),   t(body.boaterLast),   t(body.boaterSuffix ?? ''),   t(body.boaterPhone),   t(body.boaterEmail),
-        t(body.coAnglerFirst), t(body.coAnglerLast), t(body.coAnglerSuffix ?? ''), t(body.coAnglerPhone), t(body.coAnglerEmail),
+        toTitleCase(body.boaterFirst),   toTitleCase(body.boaterLast),   t(body.boaterSuffix ?? ''),   t(body.boaterPhone),   t(body.boaterEmail),
+        toTitleCase(body.coAnglerFirst), toTitleCase(body.coAnglerLast), t(body.coAnglerSuffix ?? ''), t(body.coAnglerPhone), t(body.coAnglerEmail),
         t(body.boatNo),
         Number(body.numFish)      || 0,
         Number(body.lunkerWeight) || 0,

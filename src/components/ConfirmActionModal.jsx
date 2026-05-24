@@ -3,8 +3,8 @@ import { useState, useRef, useEffect } from 'react';
 const SESSION_PW_KEY = 'ss_password';
 
 const FIELD = {
-  background: 'rgba(255,255,255,0.06)',
-  border: '1px solid rgba(139,180,225,0.3)',
+  background: 'var(--input-bg)',
+  border: '1px solid var(--input-border-color)',
   borderRadius: 8,
   color: 'var(--white)',
   fontSize: 16,

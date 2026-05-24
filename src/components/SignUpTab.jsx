@@ -6,10 +6,11 @@ import { formatPhone } from '../utils/phone';
 import { evalMath } from '../utils/evalMath';
 import { fetchContactsWithSignatures, saveContactWaiver, lookupContactId, createPublicEntry } from '../utils/api';
 import { printAllWaivers, viewWaiverForEntry, contactsToSigs, printBlankApplication, shareBlankApplication, LEGAL_CLAUSES } from '../utils/printWaivers';
+import { useConfirm } from '../hooks/useConfirm';
 
 const FIELD = {
-  background: 'rgba(255,255,255,0.06)',
-  border: '1px solid rgba(139,180,225,0.3)',
+  background: 'var(--input-bg)',
+  border: '1px solid var(--input-border-color)',
   borderRadius: 8,
   color: 'var(--white)',
   fontSize: 16,
@@ -35,7 +36,7 @@ const SECTION = {
 
 const SUFFIX_OPTIONS = ['', 'Jr.', 'Sr.', 'II', 'III', 'IV', 'V', 'VI'];
 const SUFFIX_STYLE = {
-  background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(139,180,225,0.3)',
+  background: 'var(--input-bg)', border: '1px solid var(--input-border-color)',
   borderRadius: 8, color: 'var(--white)', fontSize: 16, padding: '10px 12px',
   width: '100%', boxSizing: 'border-box', outline: 'none', cursor: 'pointer', minHeight: 44,
 };
@@ -52,6 +53,15 @@ function PublicSignUpView({ settings, entries = [], onEntriesRefresh }) {
   const [customerWaiver, setCustomerWaiver] = useState(null);
   const [submitting, setSubmitting]   = useState(false);
   const [submitError, setSubmitError] = useState('');
+
+  const today = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`; })();
+  const openDate  = settings?.applicationsOpenDate;
+  const closeDate = settings?.tournamentDate;
+  // If a tournament date is configured: locked until openDate is set AND today >= openDate
+  const isNotYetOpen          = !!(closeDate && (!openDate || today < openDate));
+  const isClosedForTournament = !!(closeDate && today >= closeDate);
+  const signUpClosed = isNotYetOpen || isClosedForTournament;
+  const fmtDate = d => d ? new Date(d + 'T12:00:00').toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }) : '';
 
   function set(field, val) { setForm(prev => ({ ...prev, [field]: val })); }
 
@@ -105,6 +115,30 @@ function PublicSignUpView({ settings, entries = [], onEntriesRefresh }) {
     <div className="tab-panel active">
       <div className="tab-scroll">
         <div style={{ maxWidth: 520, margin: '0 auto', paddingTop: 16 }}>
+
+          {signUpClosed ? (
+            <div style={{ textAlign: 'center', padding: '48px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
+              <div style={{ fontSize: 48 }}>{isNotYetOpen ? '📅' : '🔒'}</div>
+              <h2 style={{ color: 'var(--gold-light)', fontSize: 20, fontWeight: 800, margin: 0 }}>
+                {isNotYetOpen ? 'Applications Not Yet Open' : 'Applications Are Closed'}
+              </h2>
+              <p style={{ fontSize: 14, color: 'var(--header-bg)', margin: 0, lineHeight: 1.6, maxWidth: 380 }}>
+                {isNotYetOpen
+                  ? <>Online applications open on <strong style={{ color: 'var(--white)' }}>{fmtDate(openDate)}</strong>. Check back then to sign up.</>
+                  : <>Online applications are no longer being accepted. Contact tournament staff for assistance.</>
+                }
+              </p>
+              <button
+                type="button"
+                className="btn btn-outline"
+                style={{ fontSize: 14, marginTop: 8 }}
+                onClick={() => printBlankApplication(settings, {})}
+              >
+                🖨 Print Blank Application
+              </button>
+            </div>
+          ) : (
+          <>
           <div className="toolbar" style={{ marginBottom: 16, paddingLeft: 0, paddingRight: 0 }}>
             <h2 style={{ color: 'var(--gold-light)', fontSize: 18, fontWeight: 800 }}>📝 Entry Form</h2>
             <button
@@ -317,6 +351,8 @@ function PublicSignUpView({ settings, entries = [], onEntriesRefresh }) {
               </div>
             )}
           </div>
+          </>
+          )}
 
         </div>
       </div>
@@ -416,6 +452,7 @@ export default function SignUpTab({ onAddEntry, onDeleteEntry, onEdit, settings,
   const entryFee = parseFloat(settings?.fees?.entryFee) || 250;
   const lunkerFee = parseFloat(settings?.fees?.lunkerFee) || 10;
   const optFee    = parseFloat(settings?.fees?.optFee)    || 20;
+  const { confirm: showConfirm, confirmDialog } = useConfirm();
 
   const [form, setForm]         = useState({ ...EMPTY });
   const [errors, setErrors]     = useState({});
@@ -1141,7 +1178,7 @@ export default function SignUpTab({ onAddEntry, onDeleteEntry, onEdit, settings,
                     </button>
                     <button
                       type="button"
-                      onClick={() => { if (window.confirm(`Delete pending application for ${[r.boaterFirst, r.boaterLast].filter(Boolean).join(' ')}?`)) onDeleteEntry?.(r.id); }}
+                      onClick={async () => { if (await showConfirm(`Delete pending application for ${[r.boaterFirst, r.boaterLast].filter(Boolean).join(' ')}?`, { confirmLabel: 'Delete', danger: true })) onDeleteEntry?.(r.id); }}
                       style={{
                         padding: '4px 10px', fontSize: 11, cursor: 'pointer',
                         background: 'rgba(255,107,107,0.15)', color: '#ff9090',
@@ -1185,6 +1222,7 @@ export default function SignUpTab({ onAddEntry, onDeleteEntry, onEdit, settings,
           }}
         />
       )}
+      {confirmDialog}
     </div>
   );
 }

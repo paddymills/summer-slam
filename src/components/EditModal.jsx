@@ -6,7 +6,7 @@ import { evalMath } from '../utils/evalMath';
 
 const SUFFIX_OPTIONS = ['', 'Jr.', 'Sr.', 'II', 'III', 'IV', 'V', 'VI'];
 const SUFFIX_STYLE = {
-  background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(139,180,225,0.3)',
+  background: 'var(--input-bg)', border: '1px solid var(--input-border-color)',
   borderRadius: 8, color: 'var(--white)', fontSize: 14, padding: '9px 10px',
   width: '100%', boxSizing: 'border-box', outline: 'none', cursor: 'pointer',
 };
@@ -109,6 +109,7 @@ export default function EditModal({ entry, onSave, onCancel, settings, operatorM
   }, [onCancel]);
 
   function swapAnglers() {
+    if (!form.coAnglerFirst.trim() && !form.coAnglerLast.trim()) return;
     setForm(prev => ({
       ...prev,
       boaterFirst:    prev.coAnglerFirst,   coAnglerFirst:  prev.boaterFirst,
@@ -319,8 +320,15 @@ export default function EditModal({ entry, onSave, onCancel, settings, operatorM
                 <div className="edit-grid-3">
                   <div className="form-field">
                     <label htmlFor="em-boat-no">Boat #</label>
-                    <input id="em-boat-no" name="boatNo" type="text" value={form.boatNo} placeholder="42" inputMode="numeric"
-                           onChange={e => set('boatNo', e.target.value)} />
+                    {entry.boatNo ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px', borderRadius: 8, background: 'rgba(139,180,225,0.07)', border: '1px solid rgba(139,180,225,0.2)' }}>
+                        <span style={{ color: 'var(--gold-light)', fontWeight: 700, fontSize: 16 }}>#{entry.boatNo}</span>
+                        <span style={{ fontSize: 11, color: 'var(--header-bg)' }}>assigned — locked</span>
+                      </div>
+                    ) : (
+                      <input id="em-boat-no" name="boatNo" type="text" value={form.boatNo} placeholder="42" inputMode="numeric"
+                             onChange={e => set('boatNo', e.target.value)} />
+                    )}
                   </div>
                   <div className="form-field">
                     <label htmlFor="em-num-fish"># Fish</label>

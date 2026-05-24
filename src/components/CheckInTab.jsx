@@ -65,7 +65,7 @@ function ToggleField({ label, on, onToggle }) {
   );
 }
 
-export default function CheckInTab({ entries, onSave }) {
+export default function CheckInTab({ entries, onSave, settings }) {
   const [query, setQuery]           = useState('');
   const [expandedId, setExpandedId] = useState(null);
   const [draft, setDraft]           = useState({});
@@ -78,13 +78,17 @@ export default function CheckInTab({ entries, onSave }) {
     const q = query.trim().toLowerCase();
     if (!q) return [];
     const digits = q.replace(/\D/g, '');
+    const isNumericOnly = /^\d+$/.test(q);
     return entries.filter(e => {
       const name = `${e.boaterFirst} ${e.boaterLast} ${e.coAnglerFirst} ${e.coAnglerLast}`.toLowerCase();
       const bPhone = (e.boaterPhone || '').replace(/\D/g, '');
       const cPhone = (e.coAnglerPhone || '').replace(/\D/g, '');
+      const boatMatch = isNumericOnly
+        ? String(e.boatNo || '') === q
+        : String(e.boatNo || '').toLowerCase().includes(q);
       return name.includes(q)
-        || String(e.boatNo || '').includes(q)
-        || (digits && (bPhone.includes(digits) || cPhone.includes(digits)));
+        || boatMatch
+        || (digits.length >= 7 && (bPhone.includes(digits) || cPhone.includes(digits)));
     });
   }, [entries, query]);
 
@@ -182,6 +186,11 @@ export default function CheckInTab({ entries, onSave }) {
             const appNotSigned = !isOn(row.appSigned);
             const notPaid = !isOn(row.paid);
             const alreadyCheckedIn = !!row.checkedInAt;
+            const isDNS = !!row.boatNo && !row.checkedInAt;
+            const tDate = settings?.tournamentDate;
+            const isDayOf = tDate && row.signedUpAt
+              ? row.signedUpAt.slice(0, 10) >= tDate
+              : false;
             return (
               <div key={row.id} style={{
                 borderRadius: 8,
@@ -215,6 +224,12 @@ export default function CheckInTab({ entries, onSave }) {
                     </div>
                   </div>
                   <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+                    {isDNS && !alreadyCheckedIn && (
+                      <span style={{ fontSize: 10, background: 'rgba(180,180,180,0.15)', color: '#aaa', borderRadius: 4, padding: '1px 6px', fontWeight: 700 }}>DNS</span>
+                    )}
+                    {isDayOf && (
+                      <span style={{ fontSize: 10, background: 'rgba(240,173,78,0.2)', color: '#f0ad4e', borderRadius: 4, padding: '1px 6px', fontWeight: 700 }}>DAY OF</span>
+                    )}
                     {notPaid && (
                       <span style={{ fontSize: 10, background: 'rgba(255,107,107,0.2)', color: '#ff6b6b', borderRadius: 4, padding: '1px 6px', fontWeight: 700 }}>$</span>
                     )}
