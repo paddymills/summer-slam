@@ -222,7 +222,70 @@ export default function ArchiveTab({ isUnlocked, rosterCount, onLoadArchive, set
           )}
         </>
       )}
+      {isAdmin && entries.length > 0 && !loadingEntries && (
+        <AdminArchiveLog entries={entries} year={activeYear} />
+      )}
+
       {confirmDialog}
+    </div>
+  );
+}
+
+function AdminArchiveLog({ entries, year }) {
+  const [open, setOpen] = useState(false);
+
+  const events = [];
+  const name = e => [e.boaterFirst, e.boaterLast].filter(Boolean).join(' ') || `Boat #${e.boatNo || '?'}`;
+
+  for (const e of entries) {
+    if (e.signedUpAt)   events.push({ ts: e.signedUpAt,   label: `${name(e)} signed up`,                                                         boat: e.boatNo });
+    if (e.checkedInAt)  events.push({ ts: e.checkedInAt,  label: `${name(e)} checked in`,                                                          boat: e.boatNo });
+    if (e.offWaterAt)   events.push({ ts: e.offWaterAt,   label: `${name(e)} off water`,                                                            boat: e.boatNo });
+    if (e.weighedAt)    events.push({ ts: e.weighedAt,    label: `${name(e)} weighed in${parseFloat(e.totalWeight) > 0 ? ` — ${parseFloat(e.totalWeight).toFixed(2)} lbs` : ''}`, boat: e.boatNo });
+  }
+
+  events.sort((a, b) => new Date(a.ts) - new Date(b.ts));
+
+  const fmt = ts => {
+    const d = new Date(ts);
+    return d.toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  };
+
+  return (
+    <div style={{ maxWidth: 900, margin: '24px auto 0', borderTop: '1px solid rgba(139,180,225,0.15)', paddingTop: 16 }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{ background: 'none', border: 'none', color: 'var(--gold-light)', fontSize: 14, fontWeight: 700, cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 6 }}
+      >
+        {open ? '▾' : '▸'} Admin — Activity Log ({events.length} events)
+      </button>
+
+      {open && (
+        <div style={{ marginTop: 12, maxHeight: 400, overflowY: 'auto', fontSize: 12, color: 'var(--header-bg)' }}>
+          {events.length === 0 ? (
+            <p style={{ padding: '8px 0', opacity: 0.6 }}>No timestamped events in this archive.</p>
+          ) : (
+            <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+              <thead>
+                <tr style={{ borderBottom: '1px solid rgba(139,180,225,0.2)' }}>
+                  <th style={{ textAlign: 'left', padding: '4px 8px', fontWeight: 600, color: 'var(--gold-light)', whiteSpace: 'nowrap' }}>Time</th>
+                  <th style={{ textAlign: 'center', padding: '4px 8px', fontWeight: 600, color: 'var(--gold-light)', width: 56 }}>Boat</th>
+                  <th style={{ textAlign: 'left', padding: '4px 8px', fontWeight: 600, color: 'var(--gold-light)' }}>Event</th>
+                </tr>
+              </thead>
+              <tbody>
+                {events.map((ev, i) => (
+                  <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+                    <td style={{ padding: '4px 8px', whiteSpace: 'nowrap', opacity: 0.75 }}>{fmt(ev.ts)}</td>
+                    <td style={{ padding: '4px 8px', textAlign: 'center', opacity: 0.6 }}>{ev.boat || '—'}</td>
+                    <td style={{ padding: '4px 8px' }}>{ev.label}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      )}
     </div>
   );
 }
