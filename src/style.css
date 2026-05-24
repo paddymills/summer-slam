@@ -391,6 +391,7 @@ tbody td.td-name { white-space: nowrap; text-overflow: ellipsis; }
 .lb-angler-name { font-size: 24px; font-weight: 700; color: var(--white); line-height: 1.3; overflow-wrap: break-word; }
 .lb-angler-name .lb-co { font-size: 20px; font-weight: 600; color: var(--header-bg); }
 
+.lb-bottom-row { display: contents; }
 .lb-stats { display: flex; gap: 20px; align-items: center; flex-shrink: 0; }
 .lb-stat-item { text-align: center; }
 .lb-stat-item .val { font-size: 21px; font-weight: 700; color: var(--water-light); }
@@ -865,14 +866,32 @@ tbody td.td-name { white-space: nowrap; text-overflow: ellipsis; }
 @media (max-width: 480px) {
   .summary-grid-top { grid-template-columns: repeat(2, 1fr); }
 
-  .lb-card { grid-template-columns: 40px 44px 1fr auto auto; gap: 8px; padding: 10px 10px; }
+  .lb-card {
+    grid-template-columns: 40px 44px 1fr;
+    grid-template-rows: auto auto;
+    gap: 4px 8px;
+    padding: 10px 10px;
+    align-items: start;
+  }
+  .lb-rank    { grid-column: 1; grid-row: 1 / span 2; align-self: start; padding-top: 4px; }
+  .lb-boatno  { grid-column: 2; grid-row: 1 / span 2; align-self: start; border-right: none; padding-right: 0; }
+  .lb-anglers { grid-column: 3; grid-row: 1; }
+  .lb-bottom-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    grid-column: 3;
+    grid-row: 2;
+    margin-top: 4px;
+  }
+  .lb-stats   { gap: 12px; }
+  .lb-payout  { min-width: unset; text-align: right; }
   .lb-rank { font-size: 22px; }
   .lb-rank.rn { font-size: 17px; }
   .lb-boatno-num { font-size: 15px; }
   .lb-boatno-lbl { font-size: 9px; }
   .lb-angler-name { font-size: 13px; }
   .lb-angler-name .lb-co { font-size: 11px; }
-  .lb-payout { min-width: 56px; }
   .lb-payout .val { font-size: 13px; }
   .lb-payout .lbl { font-size: 9px; }
   .lb-stat-item.highlight .val { font-size: 15px; }
