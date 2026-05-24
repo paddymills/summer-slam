@@ -293,8 +293,6 @@ function PublicSignUpView({ settings, entries = [], onEntriesRefresh }) {
             </button>
 
           </form>
-          </>
-          )}
 
           {/* ── Find My Entry (digital self-sign) ── */}
           <div style={{ marginTop: 36, borderTop: '1px solid rgba(139,180,225,0.2)', paddingTop: 24 }}>
@@ -352,6 +350,8 @@ function PublicSignUpView({ settings, entries = [], onEntriesRefresh }) {
               </div>
             )}
           </div>
+          </>
+          )}
 
         </div>
       </div>
