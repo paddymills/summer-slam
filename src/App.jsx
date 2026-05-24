@@ -24,6 +24,7 @@ import { calcRanks } from './utils/calculations';
 import { useEntries, useCreateEntry, useUpdateEntry, useDeleteEntry, useClearWeighLog, useClearSignUpLog, useClearCheckInLog, useClearCheckOutLog, useClearAllEntries, useCreateEntriesBulk, useDrawBoats } from './hooks/useEntries';
 import { useSettings, useSaveSettings } from './hooks/useSettings';
 import { useContacts, useUpdateContact, useDeleteContact, useUpsertContacts } from './hooks/useContacts';
+import { useConfirm } from './hooks/useConfirm';
 
 const DEFAULT_SETTINGS = {
   tournamentDate:          '',
@@ -73,6 +74,7 @@ export default function App() {
   const [buyInBlurred, setBuyInBlurred] = useState(() => localStorage.getItem('ss_buyin_blur') !== 'false');
   const [confirmAction, setConfirmAction] = useState(null);
   const [mergePair, setMergePair]         = useState(null); // { entryA, entryB }
+  const { confirm: showConfirm, confirmDialog } = useConfirm();
 
   const showToast = useCallback((message, type = 'success') => {
     setToasts(prev => [...prev, { message, type, id: Date.now() + Math.random() }]);
@@ -219,7 +221,7 @@ const saveSettingsMut   = useSaveSettings();
   }
 
   async function handleDeleteEntry(id) {
-    if (!confirm('Delete this entry?')) return;
+    if (!(await showConfirm('Delete this entry?', { confirmLabel: 'Delete', danger: true }))) return;
     showToast('Entry deleted', 'info');
     deleteEntryMut.mutate(id, {
       onError: () => showToast('Failed to delete entry', 'error'),
@@ -515,7 +517,7 @@ const saveSettingsMut   = useSaveSettings();
     if (!year?.trim()) return;
     const label = year.trim();
     if (!/^\d{4}$/.test(label)) { alert('Year must be a 4-digit number (e.g. 2025).'); return; }
-    if (!confirm(`Archive ${rankedEntries.length} entries as "${label}"?\n\nAny existing archive for ${label} will be replaced.`)) return;
+    if (!(await showConfirm(`Archive ${rankedEntries.length} entries as "${label}"? Any existing archive for ${label} will be replaced.`, { confirmLabel: 'Archive' }))) return;
     try {
       const allContacts = await fetchContactsWithSignatures();
       const norm = s => (s || '').toLowerCase().trim();
@@ -837,6 +839,8 @@ const saveSettingsMut   = useSaveSettings();
           onCancel={() => setConfirmAction(null)}
         />
       )}
+
+      {confirmDialog}
 
       {mergePair && (
         <MergeModal

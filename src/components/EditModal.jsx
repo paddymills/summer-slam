@@ -6,7 +6,7 @@ import { evalMath } from '../utils/evalMath';
 
 const SUFFIX_OPTIONS = ['', 'Jr.', 'Sr.', 'II', 'III', 'IV', 'V', 'VI'];
 const SUFFIX_STYLE = {
-  background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(139,180,225,0.3)',
+  background: 'var(--input-bg)', border: '1px solid var(--input-border-color)',
   borderRadius: 8, color: 'var(--white)', fontSize: 14, padding: '9px 10px',
   width: '100%', boxSizing: 'border-box', outline: 'none', cursor: 'pointer',
 };
@@ -109,6 +109,7 @@ export default function EditModal({ entry, onSave, onCancel, settings, operatorM
   }, [onCancel]);
 
   function swapAnglers() {
+    if (!form.coAnglerFirst.trim() && !form.coAnglerLast.trim()) return;
     setForm(prev => ({
       ...prev,
       boaterFirst:    prev.coAnglerFirst,   coAnglerFirst:  prev.boaterFirst,

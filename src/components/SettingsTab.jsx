@@ -4,12 +4,14 @@ import { exportCSV, importCSV } from '../utils/csv';
 import { evalMath } from '../utils/evalMath';
 import { fetchEventLog, clearEventLog, fetchQrCounts, fetchContacts, fetchArchiveWinners } from '../utils/api';
 import { exportRosterPdf } from '../utils/exportRosterPdf';
+import { useConfirm } from '../hooks/useConfirm';
 
 const PANEL = { background: 'var(--settings-panel-bg)', border: '1px solid rgba(139,180,225,0.2)', borderRadius: 10, padding: 20, marginBottom: 16 };
 const H3 = { color: 'var(--header-bg)', fontSize: 14, marginBottom: 14, textTransform: 'uppercase', letterSpacing: 1, textAlign: 'center' };
 
 export default function SettingsTab({ settings, entries, isUnlocked, onUpdateSettings, onClearAll, onImport, onClearWeighLog, onClearSignUpLog, onClearCheckInLog, onClearCheckOutLog }) {
   const { fees, payoutSettings, penalties } = settings;
+  const { confirm: showConfirm, confirmDialog } = useConfirm();
 
   const [totalPayout, setTotalPayout]       = useState(payoutSettings.totalPayout || 0);
   const [numWinners, setNumWinners]         = useState(payoutSettings.numWinners  || 10);
@@ -193,8 +195,8 @@ export default function SettingsTab({ settings, entries, isUnlocked, onUpdateSet
     onUpdateSettings({ payoutPresets: updated });
   }
 
-  function handleLoadPreset(preset) {
-    if (!confirm(`Load "${preset.name}"? This will overwrite your current payout structure.`)) return;
+  async function handleLoadPreset(preset) {
+    if (!(await showConfirm(`Load "${preset.name}"? This will overwrite your current payout structure.`, { confirmLabel: 'Load' }))) return;
     setTotalPayout(preset.totalPayout);
     setNumWinners(preset.numWinners);
     setMinPayout(preset.minPayout);
@@ -203,8 +205,8 @@ export default function SettingsTab({ settings, entries, isUnlocked, onUpdateSet
     onUpdateSettings({ payoutSettings: { totalPayout: preset.totalPayout, numWinners: preset.numWinners, minPayout: preset.minPayout, payouts: preset.payouts } });
   }
 
-  function handleDeletePreset(idx) {
-    if (!confirm('Delete this preset?')) return;
+  async function handleDeletePreset(idx) {
+    if (!(await showConfirm('Delete this preset?', { confirmLabel: 'Delete', danger: true }))) return;
     const updated = localPresets.filter((_, i) => i !== idx);
     setLocalPresets(updated);
     onUpdateSettings({ payoutPresets: updated });
@@ -225,8 +227,8 @@ export default function SettingsTab({ settings, entries, isUnlocked, onUpdateSet
     syncPayouts(Array(10).fill(0), 10);
   }
 
-  function handleResetPayStructure() {
-    if (!confirm('Reset payout structure to tournament defaults? (15 winners / $10,000)')) return;
+  async function handleResetPayStructure() {
+    if (!(await showConfirm('Reset payout structure to tournament defaults? (15 winners / $10,000)', { confirmLabel: 'Reset', danger: true }))) return;
     const d = {
       totalPayout: 10000,
       numWinners:  15,
@@ -241,8 +243,8 @@ export default function SettingsTab({ settings, entries, isUnlocked, onUpdateSet
     onUpdateSettings({ payoutSettings: d });
   }
 
-  function handleReset17Winners() {
-    if (!confirm('Apply 17-winner / $10,500 payout structure?')) return;
+  async function handleReset17Winners() {
+    if (!(await showConfirm('Apply 17-winner / $10,500 payout structure?', { confirmLabel: 'Apply' }))) return;
     const d = {
       totalPayout: 10500,
       numWinners:  17,
@@ -296,8 +298,8 @@ export default function SettingsTab({ settings, entries, isUnlocked, onUpdateSet
     setEditingFlightIdx(idx);
   }
 
-  function handleFlightDelete(idx) {
-    if (!confirm('Delete this flight?')) return;
+  async function handleFlightDelete(idx) {
+    if (!(await showConfirm('Delete this flight?', { confirmLabel: 'Delete', danger: true }))) return;
     const updated = localFlights.filter((_, i) => i !== idx);
     setLocalFlights(updated);
     onUpdateSettings({ flights: flightSortAndStrip(updated) });
@@ -825,10 +827,10 @@ export default function SettingsTab({ settings, entries, isUnlocked, onUpdateSet
               <label className="btn btn-outline" style={{ cursor: 'pointer' }}>
                 📂 Import CSV
                 <input type="file" accept=".csv" style={{ display: 'none' }}
-                       onChange={e => {
+                       onChange={async e => {
                          const f = e.target.files[0];
                          if (f) {
-                           if (!confirm('Import will ADD entries to existing data (not replace). Continue?')) {
+                           if (!(await showConfirm('Import will ADD entries to existing data (not replace). Continue?', { confirmLabel: 'Import' }))) {
                              e.target.value = '';
                              return;
                            }
@@ -865,6 +867,7 @@ export default function SettingsTab({ settings, entries, isUnlocked, onUpdateSet
       {showSignUpLog  && <EventLogModal title="Sign-Up Log"   icon="📝" type="signup"   onClose={() => setShowSignUpLog(false)} />}
       {showCheckInLog && <EventLogModal title="Check In Log"  icon="⚓" type="checkin"  onClose={() => setShowCheckInLog(false)} />}
       {showOffWaterLog && <EventLogModal title="Check Out Log" icon="🏁" type="checkout" onClose={() => setShowOffWaterLog(false)} />}
+      {confirmDialog}
       </div>
     </div>
   );
@@ -1075,6 +1078,7 @@ function EventLogModal({ title, icon, type, onClose }) {
   const [events, setEvents]   = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState(null);
+  const { confirm: showConfirm, confirmDialog } = useConfirm();
 
   useEffect(() => {
     setLoading(true);
@@ -1117,7 +1121,7 @@ function EventLogModal({ title, icon, type, onClose }) {
   }
 
   async function handleClear() {
-    if (!confirm(`Clear the ${title}? This cannot be undone.`)) return;
+    if (!(await showConfirm(`Clear the ${title}? This cannot be undone.`, { confirmLabel: 'Clear', danger: true }))) return;
     try {
       await clearEventLog(type);
       setEvents([]);
@@ -1187,6 +1191,7 @@ function EventLogModal({ title, icon, type, onClose }) {
           </div>
         </div>
       </div>
+      {confirmDialog}
     </div>
   );
 }

@@ -6,10 +6,11 @@ import { formatPhone } from '../utils/phone';
 import { evalMath } from '../utils/evalMath';
 import { fetchContactsWithSignatures, saveContactWaiver, lookupContactId, createPublicEntry } from '../utils/api';
 import { printAllWaivers, viewWaiverForEntry, contactsToSigs, printBlankApplication, shareBlankApplication, LEGAL_CLAUSES } from '../utils/printWaivers';
+import { useConfirm } from '../hooks/useConfirm';
 
 const FIELD = {
-  background: 'rgba(255,255,255,0.06)',
-  border: '1px solid rgba(139,180,225,0.3)',
+  background: 'var(--input-bg)',
+  border: '1px solid var(--input-border-color)',
   borderRadius: 8,
   color: 'var(--white)',
   fontSize: 16,
@@ -35,7 +36,7 @@ const SECTION = {
 
 const SUFFIX_OPTIONS = ['', 'Jr.', 'Sr.', 'II', 'III', 'IV', 'V', 'VI'];
 const SUFFIX_STYLE = {
-  background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(139,180,225,0.3)',
+  background: 'var(--input-bg)', border: '1px solid var(--input-border-color)',
   borderRadius: 8, color: 'var(--white)', fontSize: 16, padding: '10px 12px',
   width: '100%', boxSizing: 'border-box', outline: 'none', cursor: 'pointer', minHeight: 44,
 };
@@ -451,6 +452,7 @@ export default function SignUpTab({ onAddEntry, onDeleteEntry, onEdit, settings,
   const entryFee = parseFloat(settings?.fees?.entryFee) || 250;
   const lunkerFee = parseFloat(settings?.fees?.lunkerFee) || 10;
   const optFee    = parseFloat(settings?.fees?.optFee)    || 20;
+  const { confirm: showConfirm, confirmDialog } = useConfirm();
 
   const [form, setForm]         = useState({ ...EMPTY });
   const [errors, setErrors]     = useState({});
@@ -1176,7 +1178,7 @@ export default function SignUpTab({ onAddEntry, onDeleteEntry, onEdit, settings,
                     </button>
                     <button
                       type="button"
-                      onClick={() => { if (window.confirm(`Delete pending application for ${[r.boaterFirst, r.boaterLast].filter(Boolean).join(' ')}?`)) onDeleteEntry?.(r.id); }}
+                      onClick={async () => { if (await showConfirm(`Delete pending application for ${[r.boaterFirst, r.boaterLast].filter(Boolean).join(' ')}?`, { confirmLabel: 'Delete', danger: true })) onDeleteEntry?.(r.id); }}
                       style={{
                         padding: '4px 10px', fontSize: 11, cursor: 'pointer',
                         background: 'rgba(255,107,107,0.15)', color: '#ff9090',
@@ -1220,6 +1222,7 @@ export default function SignUpTab({ onAddEntry, onDeleteEntry, onEdit, settings,
           }}
         />
       )}
+      {confirmDialog}
     </div>
   );
 }

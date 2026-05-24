@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { fetchArchiveYears, fetchArchive } from '../utils/api';
 import { exportHTML } from '../utils/exportHtml';
 import { viewArchivedWaiver } from '../utils/printWaivers';
+import { useConfirm } from '../hooks/useConfirm';
 
 export default function ArchiveTab({ isUnlocked, rosterCount, onLoadArchive, settings, isAdmin }) {
   const [years, setYears]       = useState([]);
@@ -10,6 +11,7 @@ export default function ArchiveTab({ isUnlocked, rosterCount, onLoadArchive, set
   const [loading, setLoading]   = useState(true);
   const [loadingEntries, setLoadingEntries] = useState(false);
   const [error, setError]       = useState(null);
+  const { confirm: showConfirm, confirmDialog } = useConfirm();
 
   useEffect(() => {
     fetchArchiveYears()
@@ -80,8 +82,8 @@ export default function ArchiveTab({ isUnlocked, rosterCount, onLoadArchive, set
                 className="btn btn-primary"
                 disabled={rosterCount > 0}
                 title={rosterCount > 0 ? 'Clear the roster before loading an archive' : `Load ${activeYear} entries into the roster for editing`}
-                onClick={() => {
-                  if (!confirm(`Load ${entries.length} entries from ${activeYear} into the roster?\n\nYou can edit them there and re-archive when done.`)) return;
+                onClick={async () => {
+                  if (!(await showConfirm(`Load ${entries.length} entries from ${activeYear} into the roster? You can edit them there and re-archive when done.`, { confirmLabel: 'Load' }))) return;
                   onLoadArchive(entries);
                 }}
               >
@@ -220,6 +222,7 @@ export default function ArchiveTab({ isUnlocked, rosterCount, onLoadArchive, set
           )}
         </>
       )}
+      {confirmDialog}
     </div>
   );
 }
