@@ -659,6 +659,7 @@ export default function RosterTab({
                     <td className="td-name">
                       {row.boaterFirst}
                       {isDNS && <span title="Did Not Start" style={{ marginLeft: 4, fontSize: 10, background: 'rgba(180,180,180,0.15)', color: '#aaa', borderRadius: 3, padding: '1px 4px', fontWeight: 700 }}>DNS</span>}
+                      {!isDNS && row._isDQ && <span title={`DQ — ${row._minsLate} min late`} style={{ marginLeft: 4, fontSize: 10, background: 'rgba(255,107,107,0.2)', color: '#ff9090', borderRadius: 3, padding: '1px 4px', fontWeight: 700 }}>DQ</span>}
                       {duplicateEntryIds.has(row.id) && <span title="Duplicate angler" style={{ marginLeft: 4, color: '#ffb450', fontWeight: 700 }}>!</span>}
                     </td>
                     <td className="td-name">{row.boaterLast}{row.boaterSuffix ? ` ${row.boaterSuffix}` : ''}</td>
@@ -849,6 +850,8 @@ export default function RosterTab({
                 <tr key={row.id}>
                   <td className="td-name">
                     {row.boaterFirst}
+                    {(!!row.boatNo && !row.checkedInAt) && <span title="Did Not Start" style={{ marginLeft: 4, fontSize: 10, background: 'rgba(180,180,180,0.15)', color: '#aaa', borderRadius: 3, padding: '1px 4px', fontWeight: 700 }}>DNS</span>}
+                    {!(!!row.boatNo && !row.checkedInAt) && row._isDQ && <span title={`DQ — ${row._minsLate} min late`} style={{ marginLeft: 4, fontSize: 10, background: 'rgba(255,107,107,0.2)', color: '#ff9090', borderRadius: 3, padding: '1px 4px', fontWeight: 700 }}>DQ</span>}
                     {duplicateEntryIds.has(row.id) && <span title="Duplicate angler" style={{ marginLeft: 4, color: '#ffb450', fontWeight: 700 }}>!</span>}
                   </td>
                   <td className="td-name">{row.boaterLast}{row.boaterSuffix ? ` ${row.boaterSuffix}` : ''}</td>
