@@ -845,6 +845,42 @@ tbody td.td-name { white-space: nowrap; text-overflow: ellipsis; }
 }
 
 /* ── LOCKED ROSTER MOBILE CARDS ── */
+/* Locked roster — header banner */
+.locked-header-banner {
+  padding: 16px 20px 12px;
+  flex-shrink: 0;
+  background: rgba(255,180,80,0.1);
+  border-bottom: 2px solid rgba(255,180,80,0.35);
+  text-align: center;
+}
+.locked-chips-row {
+  display: inline-flex;
+  gap: 10px;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+.locked-chip {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(255,180,80,0.2);
+  border: 1px solid rgba(255,180,80,0.5);
+  border-radius: 10px;
+  padding: 6px 20px;
+}
+.locked-chip-num   { font-size: 28px; font-weight: 800; color: var(--gold-light); line-height: 1; }
+.locked-chip-label { font-size: 13px; color: var(--gold-light); opacity: 0.85; text-transform: uppercase; letter-spacing: 2px; margin-left: 8px; }
+.locked-disclaimer-text {
+  font-size: 15px;
+  color: var(--gold-light);
+  line-height: 1.65;
+  margin: 0;
+  max-width: 700px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
 .locked-mobile-cards { display: none; }
 
 .locked-card {
@@ -867,6 +903,14 @@ body.light .locked-card { border-bottom-color: rgba(58,110,58,0.18); }
   /* Locked roster: switch from table to cards */
   .locked-desktop-only { display: none !important; }
   .locked-mobile-cards { display: block; overflow-y: auto; flex: 1; min-height: 0; }
+
+  /* Shrink registration header so more cards are visible */
+  .locked-header-banner { padding: 8px 12px 8px; }
+  .locked-chips-row { gap: 6px; margin-bottom: 6px; }
+  .locked-chip { padding: 4px 12px; }
+  .locked-chip-num   { font-size: 20px; }
+  .locked-chip-label { font-size: 11px; margin-left: 6px; letter-spacing: 1px; }
+  .locked-disclaimer-text { font-size: 12px; line-height: 1.45; }
 
   /* Archive results: show only Place, Boater First, Boater Last, Total Wt */
   .archive-roster-table {
