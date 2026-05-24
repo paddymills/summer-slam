@@ -912,11 +912,11 @@ body.light .locked-card { border-bottom-color: rgba(58,110,58,0.18); }
   .locked-chip-label { font-size: 11px; margin-left: 6px; letter-spacing: 1px; }
   .locked-disclaimer-text { font-size: 12px; line-height: 1.45; }
 
-  /* Archive results: show only Place, Boater First, Boater Last, Total Wt */
+  /* Archive results: Place, Boater, Co-Angler, Total Wt — rest hidden */
   .archive-roster-table {
     table-layout: auto !important;
     min-width: unset !important;
-    font-size: 13px;
+    font-size: 11px;
   }
   .archive-roster-table .art-hide-mobile { display: none; }
 }

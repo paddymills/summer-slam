@@ -131,8 +131,8 @@ export default function ArchiveTab({ isUnlocked, rosterCount, onLoadArchive, set
                   <col style={{ width: 60 }} />
                   <col />
                   <col />
-                  <col className="art-hide-mobile" />
-                  <col className="art-hide-mobile" />
+                  <col />
+                  <col />
                   <col className="art-hide-mobile" style={{ width: 72 }} />
                   <col className="art-hide-mobile" style={{ width: 96 }} />
                   <col className="art-hide-mobile" style={{ width: 64 }} />
@@ -145,8 +145,8 @@ export default function ArchiveTab({ isUnlocked, rosterCount, onLoadArchive, set
                     <th style={{ textAlign: 'left' }}>Place</th>
                     <th style={{ textAlign: 'left' }}>Boater First</th>
                     <th style={{ textAlign: 'left' }}>Boater Last</th>
-                    <th className="art-hide-mobile" style={{ textAlign: 'left' }}>Co-Angler First</th>
-                    <th className="art-hide-mobile" style={{ textAlign: 'left' }}>Co-Angler Last</th>
+                    <th style={{ textAlign: 'left' }}>Co-Angler First</th>
+                    <th style={{ textAlign: 'left' }}>Co-Angler Last</th>
                     <th className="art-hide-mobile" style={{ textAlign: 'left' }}>Boat #</th>
                     <th className="art-hide-mobile" style={{ textAlign: 'right' }}>Lunker (lbs)</th>
                     <th className="art-hide-mobile" style={{ textAlign: 'center' }}># Fish</th>
@@ -165,8 +165,8 @@ export default function ArchiveTab({ isUnlocked, rosterCount, onLoadArchive, set
                         <td className={`rank-cell ${rankClass}`}>{rank ?? ''}</td>
                         <td className="td-name">{row.boaterFirst}</td>
                         <td className="td-name">{row.boaterLast}</td>
-                        <td className="td-name art-hide-mobile">{row.coAnglerFirst}</td>
-                        <td className="td-name art-hide-mobile">{row.coAnglerLast}</td>
+                        <td className="td-name">{row.coAnglerFirst}</td>
+                        <td className="td-name">{row.coAnglerLast}</td>
                         <td className="art-hide-mobile" style={{ padding: '8px 12px' }}>{row.boatNo}</td>
                         <td className="art-hide-mobile" style={{ textAlign: 'right', fontWeight: 600 }}>
                           {parseFloat(row.lunkerWeight) > 0 ? parseFloat(row.lunkerWeight).toFixed(2) : '—'}
