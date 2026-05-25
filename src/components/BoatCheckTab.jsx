@@ -185,15 +185,25 @@ export default function BoatCheckTab({ entries, settings, isUnlocked, onToggleOf
                     </span>
                   </td>
                   <td style={{ fontWeight: 700, fontSize: 16 }}>{row.boatNo || '—'}</td>
-                  <td style={{ overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
-                    {row.boaterPhone
-                      ? <a href={`tel:${row.boaterPhone}`} style={{ color: 'inherit', textDecoration: 'none' }}>{[row.boaterFirst, row.boaterLast, row.boaterSuffix].filter(Boolean).join(' ')}</a>
-                      : <>{[row.boaterFirst, row.boaterLast, row.boaterSuffix].filter(Boolean).join(' ')}</>}
+                  <td style={{ overflow: 'hidden' }}>
+                    <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {[row.boaterFirst, row.boaterLast, row.boaterSuffix].filter(Boolean).join(' ')}
+                    </div>
+                    {row.boaterPhone && (
+                      <a href={`tel:${row.boaterPhone}`} style={{ fontSize: 12, color: 'var(--header-bg)', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                        {row.boaterPhone}
+                      </a>
+                    )}
                   </td>
-                  <td style={{ color: 'var(--header-bg)', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
-                    {row.coAnglerFirst && row.coAnglerPhone
-                      ? <a href={`tel:${row.coAnglerPhone}`} style={{ color: 'inherit', textDecoration: 'none' }}>{[row.coAnglerFirst, row.coAnglerLast, row.coAnglerSuffix].filter(Boolean).join(' ')}</a>
-                      : <>{[row.coAnglerFirst, row.coAnglerLast, row.coAnglerSuffix].filter(Boolean).join(' ')}</>}
+                  <td style={{ color: 'var(--header-bg)', overflow: 'hidden' }}>
+                    <div style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {[row.coAnglerFirst, row.coAnglerLast, row.coAnglerSuffix].filter(Boolean).join(' ')}
+                    </div>
+                    {row.coAnglerFirst && row.coAnglerPhone && (
+                      <a href={`tel:${row.coAnglerPhone}`} style={{ fontSize: 12, color: 'var(--header-bg)', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                        {row.coAnglerPhone}
+                      </a>
+                    )}
                   </td>
                 </tr>
               );

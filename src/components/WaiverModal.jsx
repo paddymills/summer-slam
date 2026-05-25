@@ -38,8 +38,13 @@ function SigPad({ label, number, canvasRef, onStroke }) {
 
   function getPos(e, canvas) {
     const r = canvas.getBoundingClientRect();
+    const scaleX = canvas.width  / r.width;
+    const scaleY = canvas.height / r.height;
     const src = e.touches ? e.touches[0] : e;
-    return { x: src.clientX - r.left, y: src.clientY - r.top };
+    return {
+      x: (src.clientX - r.left) * scaleX,
+      y: (src.clientY - r.top)  * scaleY,
+    };
   }
 
   function start(e) {

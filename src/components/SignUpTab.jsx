@@ -74,6 +74,11 @@ function PublicSignUpView({ settings, entries = [], onEntriesRefresh }) {
       setSubmitError('Boater phone number is required.');
       return;
     }
+    const hasCoA = form.coAnglerFirst.trim() || form.coAnglerLast.trim();
+    if (hasCoA && !form.coAnglerPhone.trim()) {
+      setSubmitError('Co-angler phone number is required.');
+      return;
+    }
     setSubmitError('');
     setSubmitting(true);
     try {
