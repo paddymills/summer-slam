@@ -217,8 +217,9 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
   // Submission
   const [submitting,    setSubmitting]    = useState(false);
   const [error,         setError]         = useState('');
-  const [submitted,     setSubmitted]     = useState(false);
-  const [submittedSigs, setSubmittedSigs] = useState(null); // { boater, coAngler, result }
+  const [submitted,       setSubmitted]       = useState(false);
+  const [submittedSigs,   setSubmittedSigs]   = useState(null); // { boater, coAngler, result }
+  const [showFeeConfirm,  setShowFeeConfirm]  = useState(false);
   const [nearDupPrompt, setNearDupPrompt] = useState(null);
   const pinRef = useRef(null);
 
@@ -896,24 +897,6 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
                   : '⚠ Fee entry is pending — an operator will complete this before the tournament.'}
               </div>
             )}
-            {submittedSigs?.customerMode && (
-              <div style={{ background: '#fff3cd', border: '3px solid #c8a000', borderRadius: 10, padding: '18px 20px', marginBottom: 16 }}>
-                <div style={{ fontSize: 17, fontWeight: 900, color: '#7a5c00', marginBottom: 12, textAlign: 'center', textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                  ⚠ Action Required — Fee Verification
-                </div>
-                <div style={{ fontSize: 14, color: '#5a4200', lineHeight: 1.7 }}>
-                  <div style={{ marginBottom: 10 }}>
-                    <strong>In-Store Purchase:</strong> Email or text a photo of your receipt along with your <strong>boater first and last name</strong> to tournament staff for verification.
-                  </div>
-                  <div>
-                    <strong>Online Order:</strong> Your order number is required for verification. Make sure your order number was entered on your application, or contact staff to provide it.
-                  </div>
-                </div>
-                <div style={{ marginTop: 12, textAlign: 'center', fontSize: 13, color: '#7a5c00', fontWeight: 700 }}>
-                  Your entry will not be confirmed as paid until staff verifies your purchase.
-                </div>
-              </div>
-            )}
           </>
         )}
 
@@ -976,6 +959,52 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8 }}>
             {customerMode ? (
+              showFeeConfirm ? (
+                /* ── Fee verification confirmation step ── */
+                <div style={{ border: '3px solid #c8a000', borderRadius: 10, background: '#fff3cd', padding: '20px' }}>
+                  <div style={{ fontSize: 17, fontWeight: 900, color: '#7a5c00', marginBottom: 12, textAlign: 'center', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                    ⚠ Before You Submit — Fee Verification Required
+                  </div>
+                  <div style={{ fontSize: 14, color: '#5a4200', lineHeight: 1.75, marginBottom: 16 }}>
+                    <div style={{ marginBottom: 10 }}>
+                      <strong>In-Store Purchase:</strong> Email or text a photo of your receipt along with your <strong>boater first and last name</strong> to tournament staff for verification.
+                    </div>
+                    <div>
+                      <strong>Online Order:</strong> Your order number is required for verification. Make sure your order number is entered on your application before submitting, or contact staff to provide it.
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 13, color: '#7a5c00', fontWeight: 700, textAlign: 'center', marginBottom: 16 }}>
+                    Your entry will not be confirmed as paid until staff verifies your purchase.
+                  </div>
+                  <div style={{ display: 'flex', gap: 10 }}>
+                    <button
+                      type="button"
+                      onClick={() => setShowFeeConfirm(false)}
+                      style={{
+                        flex: '0 0 auto', padding: '13px 20px', borderRadius: 8,
+                        border: '1.5px solid #aaa', background: '#fff',
+                        fontSize: 14, cursor: 'pointer', color: '#555', fontWeight: 600,
+                      }}
+                    >
+                      ← Edit Application
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleCustomerSubmit}
+                      disabled={submitting}
+                      style={{
+                        flex: 1, padding: '13px 0', borderRadius: 8,
+                        border: 'none', background: '#1a5276',
+                        fontSize: 15, fontWeight: 700,
+                        cursor: submitting ? 'not-allowed' : 'pointer',
+                        color: '#fff', opacity: submitting ? 0.5 : 1,
+                      }}
+                    >
+                      {submitting ? 'Saving…' : '✓ Confirm & Submit'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
               <div style={{ display: 'flex', gap: 12 }}>
                 <button
                   type="button"
@@ -990,7 +1019,7 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
                 </button>
                 <button
                   type="button"
-                  onClick={handleCustomerSubmit}
+                  onClick={() => setShowFeeConfirm(true)}
                   disabled={submitting}
                   style={{
                     flex: 1, padding: '13px 0', borderRadius: 8,
@@ -1000,9 +1029,10 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
                     color: '#fff', opacity: submitting ? 0.5 : 1,
                   }}
                 >
-                  {submitting ? 'Saving…' : '✓ Submit Application'}
+                  ✓ Submit Application
                 </button>
               </div>
+              )
             ) : null}
             {!customerMode && feePreFilled && !unlocked && (
               <div>
