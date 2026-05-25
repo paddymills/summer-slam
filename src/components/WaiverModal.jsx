@@ -896,6 +896,24 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
                   : '⚠ Fee entry is pending — an operator will complete this before the tournament.'}
               </div>
             )}
+            {submittedSigs?.customerMode && (
+              <div style={{ background: '#fff3cd', border: '3px solid #c8a000', borderRadius: 10, padding: '18px 20px', marginBottom: 16 }}>
+                <div style={{ fontSize: 17, fontWeight: 900, color: '#7a5c00', marginBottom: 12, textAlign: 'center', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                  ⚠ Action Required — Fee Verification
+                </div>
+                <div style={{ fontSize: 14, color: '#5a4200', lineHeight: 1.7 }}>
+                  <div style={{ marginBottom: 10 }}>
+                    <strong>In-Store Purchase:</strong> Email or text a photo of your receipt along with your <strong>boater first and last name</strong> to tournament staff for verification.
+                  </div>
+                  <div>
+                    <strong>Online Order:</strong> Your order number is required for verification. Make sure your order number was entered on your application, or contact staff to provide it.
+                  </div>
+                </div>
+                <div style={{ marginTop: 12, textAlign: 'center', fontSize: 13, color: '#7a5c00', fontWeight: 700 }}>
+                  Your entry will not be confirmed as paid until staff verifies your purchase.
+                </div>
+              </div>
+            )}
           </>
         )}
 
