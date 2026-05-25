@@ -56,6 +56,7 @@ export default function OffLimitsTab({ settings }) {
         .rules-body ol, .rules-body ul { padding-left: 22px; margin: 0 0 10px; }
         .rules-body li { font-size: 14px; line-height: 1.65; color: var(--white); margin-bottom: 6px; }
         .rules-body strong { color: var(--gold-light); }
+        .rules-body a { color: var(--gold-light); }
         .rules-body hr { border: none; border-top: 1px solid rgba(139,180,225,0.2); margin: 18px 0; }
         .rules-body table { width: 100%; border-collapse: collapse; margin: 0 0 14px; }
         .rules-body th { font-size: 12px; text-transform: uppercase; letter-spacing: 0.8px; color: var(--header-bg);

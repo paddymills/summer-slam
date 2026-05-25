@@ -12,8 +12,8 @@
 
 ## Tournament Director Contact Numbers
 
-- Mike Acord — 717-278-5225
-- George Acord — 717-278-5223
+- Mike Acord — [717-278-5225](tel:7172785225)
+- George Acord — [717-278-5223](tel:7172785223)
 
 ## Weigh-In Times
 
