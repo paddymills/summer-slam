@@ -303,6 +303,34 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
     }
   }
 
+  // Background contact resolution for customer self-sign — no near-dup modal, best-effort only
+  async function resolveContactsCustomer({ boaterInfo, coaInfo, boaterSigUrl, coaSigUrl, waiverHtml, now, snapshot }) {
+    const anglers = [
+      { ...boaterInfo, sigUrl: boaterSigUrl },
+      ...(coaInfo ? [{ ...coaInfo, sigUrl: coaSigUrl }] : []),
+    ];
+    for (const angler of anglers) {
+      try {
+        if (angler.cid) {
+          await saveContactWaiver(angler.cid, { signature: angler.sigUrl, signedAt: now, waiverYear: year, waiverSnapshot: snapshot, waiverHtml });
+          continue;
+        }
+        const candidates = await searchContacts(`${angler.first} ${angler.last}`).catch(() => []);
+        const exact = candidates.find(c =>
+          normName(c.firstName) === normName(angler.first) &&
+          normName(c.lastName)  === normName(angler.last)
+        );
+        if (exact) {
+          await saveContactWaiver(exact.id, { signature: angler.sigUrl, signedAt: now, waiverYear: year, waiverSnapshot: snapshot, waiverHtml });
+        } else {
+          await upsertContacts([{ firstName: angler.first, lastName: angler.last, phone: angler.phone, email: angler.email }]);
+          const cid = await lookupContactId(angler.first, angler.last, angler.phone);
+          if (cid) await saveContactWaiver(cid, { signature: angler.sigUrl, signedAt: now, waiverYear: year, waiverSnapshot: snapshot, waiverHtml });
+        }
+      } catch (_) {}
+    }
+  }
+
   async function handleCustomerSubmit() {
     const amount = parseFloat(buyInAmount) || 0;
     const effectiveBoaterPhone   = entry.boaterPhone?.trim()   || formatPhone(boaterPhone.trim());
@@ -329,6 +357,19 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
       const result = { appSigned: 1, buyIn: amount, lunker: lunkerChecked ? 1 : 0, option: optionChecked ? 1 : 0, paid: 0, feeVerified: 0 };
       setSubmittedSigs({ boater: boaterSigUrl, coAngler: coaSigUrl, result, customerMode: true });
       setSubmitted(true);
+
+      // Fire-and-forget: create/update contact record and save waiver signature
+      const now      = new Date().toISOString();
+      const snapshot = JSON.stringify({ year, tournamentDate: tDate, tournamentLocation: tLocation });
+      const waiverHtml = waiverHTMLTemplate(
+        { ...entry, boaterPhone: effectiveBoaterPhone, coAnglerPhone: effectiveCoAnglerPhone, buyIn: amount, lunker: lunkerChecked ? 1 : 0, option: optionChecked ? 1 : 0, paid: 0, appSigned: 1 },
+        settings
+      );
+      resolveContactsCustomer({
+        boaterInfo: { cid: boaterContactId, first: entry.boaterFirst, last: entry.boaterLast, phone: effectiveBoaterPhone, email: entry.boaterEmail },
+        coaInfo: hasCoAngler ? { cid: coAnglerContactId, first: entry.coAnglerFirst, last: entry.coAnglerLast, phone: effectiveCoAnglerPhone, email: entry.coAnglerEmail } : null,
+        boaterSigUrl, coaSigUrl, waiverHtml, now, snapshot,
+      }).catch(() => {});
     } catch (e) {
       setError(e.message || 'Failed to save. Please try again.');
     } finally {
