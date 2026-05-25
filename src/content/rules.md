@@ -20,7 +20,7 @@ SFT Summer Slam Tournaments require sportsmanship and courtesy to be displayed a
 
 ## #5 — Launch Position
 
-Launch position will be determined by random draw by participant at registration.
+Launch position is assigned by random draw conducted when online registration closes. Each team receives a boat number that determines their launch order. Teams registering after the draw — including day-of sign-ups — will be assigned the next available boat number in sequence.
 
 ## #6 — Flights and Check-In Times
 
