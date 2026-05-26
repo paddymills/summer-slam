@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import HelpBubble from './HelpBubble';
 import ContactSuggest from './ContactSuggest';
 import EmailInput from './EmailInput';
 import WaiverModal from './WaiverModal';
@@ -178,7 +179,12 @@ function PublicSignUpView({ settings, entries = [], onEntriesRefresh }) {
 
             {/* Boater */}
             <div>
-              <div style={SECTION}>Boater</div>
+              <div style={{ ...SECTION, display: 'flex', alignItems: 'center' }}>
+                Boater
+                <HelpBubble title="Why do we need your name?">
+                  Your full legal first and last name are required to generate your tournament entry form and waiver. Make sure it matches your ID — this document is a legal release.
+                </HelpBubble>
+              </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 10 }}>
                 <div style={{ flex: '1 1 160px' }}>
                   <label style={LABEL}>First Name</label>
@@ -196,20 +202,33 @@ function PublicSignUpView({ settings, entries = [], onEntriesRefresh }) {
                 </div>
               </div>
               <div style={{ marginBottom: 10 }}>
-                <label style={LABEL}>Phone</label>
+                <label style={{ ...LABEL, display: 'flex', alignItems: 'center' }}>
+                  Phone
+                  <HelpBubble title="Why do we need your phone number?">
+                    Required so tournament staff can reach you on tournament day for weigh-in times, breakdowns, or emergencies. Cell phones must be off during fishing hours except for emergencies.
+                  </HelpBubble>
+                </label>
                 <input type="tel" value={form.boaterPhone} placeholder="555-123-4567" onChange={e => set('boaterPhone', e.target.value)} onBlur={e => set('boaterPhone', formatPhone(e.target.value))} style={FIELD} />
               </div>
               <div>
-                <label style={LABEL}>Email</label>
+                <label style={{ ...LABEL, display: 'flex', alignItems: 'center' }}>
+                  Email
+                  <HelpBubble title="Why do we need your email?">
+                    Optional — used to send your signed application confirmation and any tournament updates. We won't share it.
+                  </HelpBubble>
+                </label>
                 <EmailInput value={form.boaterEmail} onChange={v => set('boaterEmail', v)} style={FIELD} />
               </div>
             </div>
 
             {/* Co-Angler */}
             <div>
-              <div style={SECTION}>
+              <div style={{ ...SECTION, display: 'flex', alignItems: 'center' }}>
                 Co-Angler{' '}
-                <span style={{ fontWeight: 400, opacity: 0.55, fontSize: 11, textTransform: 'none', letterSpacing: 0 }}>(optional)</span>
+                <span style={{ fontWeight: 400, opacity: 0.55, fontSize: 11, textTransform: 'none', letterSpacing: 0, marginLeft: 4 }}>(optional)</span>
+                <HelpBubble title="Do I need a co-angler?">
+                  Co-anglers are optional — you can fish as a solo boater. If you have a fishing partner, add them here. They will be listed on the entry form and must also sign the waiver. Their phone number is required if entered.
+                </HelpBubble>
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 10 }}>
                 <div style={{ flex: '1 1 160px' }}>
@@ -240,7 +259,12 @@ function PublicSignUpView({ settings, entries = [], onEntriesRefresh }) {
             {/* Order #s */}
             <div style={{ display: 'flex', gap: 10 }}>
               <div style={{ flex: 1 }}>
-                <label style={LABEL}>Boater Order # <span style={{ fontWeight: 400, opacity: 0.55, fontSize: 11, textTransform: 'none', letterSpacing: 0 }}>(optional)</span></label>
+                <label style={{ ...LABEL, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 4 }}>
+                  <span>Boater Order # <span style={{ fontWeight: 400, opacity: 0.55, fontSize: 11, textTransform: 'none', letterSpacing: 0 }}>(optional)</span></span>
+                  <HelpBubble title="What is an Order Number?">
+                    If you purchased your entry products online (shimano.com, tacklewarehouse.com, etc.), enter your order number here so staff can verify your fee remotely. Leave blank if paying in-store with product.
+                  </HelpBubble>
+                </label>
                 <input type="text" value={form.boaterOrderNo} placeholder="Online order #" onChange={e => set('boaterOrderNo', e.target.value)} style={FIELD} />
               </div>
               <div style={{ flex: 1 }}>

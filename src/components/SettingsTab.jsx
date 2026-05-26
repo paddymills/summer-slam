@@ -857,6 +857,9 @@ export default function SettingsTab({ settings, entries, isUnlocked, onUpdateSet
           </ul>
         </div>
 
+        {/* Admin Help & Reference */}
+        <AdminHelp settings={settings} />
+
         <div style={{ textAlign: 'center', padding: '8px 0 4px', color: 'var(--header-bg)', fontSize: 12 }}>
           <div style={{ marginBottom: 4 }}>Summer Slam Tournament Manager <span style={{ color: 'var(--gold-light)', fontWeight: 700 }}>v1.0.0</span></div>
           <div>Created by <strong style={{ color: 'var(--white)' }}>David Skiles</strong></div>
@@ -868,6 +871,202 @@ export default function SettingsTab({ settings, entries, isUnlocked, onUpdateSet
       {showCheckInLog && <EventLogModal title="Check In Log"  icon="⚓" type="checkin"  onClose={() => setShowCheckInLog(false)} />}
       {showOffWaterLog && <EventLogModal title="Check Out Log" icon="🏁" type="checkout" onClose={() => setShowOffWaterLog(false)} />}
       {confirmDialog}
+      </div>
+    </div>
+  );
+}
+
+function AdminHelp({ settings }) {
+  const [open, setOpen] = useState(null);
+  const toggle = key => setOpen(k => k === key ? null : key);
+
+  const pen  = settings?.penalties || {};
+  const fees = settings?.fees || {};
+  const flights = (settings?.flights || [])
+    .slice().sort((a, b) => (parseInt(a.boatStart) || 0) - (parseInt(b.boatStart) || 0));
+
+  const dead    = parseFloat(pen.deadFishPenalty)    || 0.5;
+  const short   = parseFloat(pen.shortFishPenalty)   || 1.0;
+  const over    = parseFloat(pen.overLimitPenalty)   || 3.0;
+  const maxFish = parseInt(pen.maxFish)              || 5;
+  const minLen  = parseInt(pen.minFishLength)        || 15;
+  const latePerMin = parseFloat(pen.latePenaltyPerMin) || 0.5;
+  const lateDQ  = parseInt(pen.latePenaltyDQMin)     || 15;
+  const entry   = parseFloat(fees.entryFee)          || 250;
+  const opt1Pct = parseFloat(settings?.option1Pct)   || 70;
+  const opt2Pct = parseFloat(settings?.option2Pct)   || 30;
+
+  const sections = [
+    {
+      key: 'scoring',
+      label: '🏆 Scoring & Ranking',
+      body: (
+        <>
+          <p>Boats are ranked by <strong>adjusted total weight</strong> — scale weight minus all penalties — highest to lowest.</p>
+          <p><strong>Ties</strong> are broken by the heaviest single fish (lunker weight). If both are equal, prize money is split equally.</p>
+          <p><strong>Ranking order:</strong></p>
+          <ul>
+            <li>Non-DQ boats by adjusted weight</li>
+            <li>DQ boats (below all non-DQ, by adjusted weight)</li>
+            <li>DNS boats (Did Not Start, at the bottom)</li>
+          </ul>
+          <p>Fish limit: <strong>{maxFish} fish</strong> per boat · Minimum length: <strong>{minLen}"</strong></p>
+        </>
+      ),
+    },
+    {
+      key: 'dqdns',
+      label: '⚠️ DQ & DNS Rules',
+      body: (
+        <>
+          <p><strong>DNS — Did Not Start:</strong> Set manually on a boat that registered but never launched. DNS boats are blocked from weigh-in.</p>
+          <p><strong>Late penalty:</strong> When a boat's checkout time exceeds their flight's check-in deadline, they are docked <strong>{latePerMin} lb per minute</strong> late.</p>
+          <p><strong>DQ — Disqualified:</strong> Triggered automatically when a boat is more than <strong>{lateDQ} minutes</strong> late. DQ boats can still weigh in — their weight is recorded but they finish below all non-DQ boats.</p>
+          <p>Both thresholds are configurable in <strong>Penalties &amp; Limits</strong> above.</p>
+        </>
+      ),
+    },
+    {
+      key: 'penalties',
+      label: '🐟 Penalties Quick Reference',
+      body: (
+        <>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+            <tbody>
+              {[
+                ['Dead fish', `-${dead} lb per fish`],
+                ['Short fish', `-${short} lb + fish removed from bag`],
+                [`Over ${maxFish}-fish limit`, `-${over} lb per fish over limit`],
+                ['Late return', `-${latePerMin} lb/min past deadline`],
+                [`Late DQ`, `After ${lateDQ} min late`],
+              ].map(([label, val]) => (
+                <tr key={label} style={{ borderBottom: '1px solid var(--card-border)' }}>
+                  <td style={{ padding: '5px 0', color: 'var(--white)', fontWeight: 600 }}>{label}</td>
+                  <td style={{ padding: '5px 0', color: 'var(--gold-light)', textAlign: 'right' }}>{val}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </>
+      ),
+    },
+    {
+      key: 'flights',
+      label: '🛥️ Flight Scheduling',
+      body: (
+        <>
+          <p>Each flight covers a <strong>boat number range</strong> and has a <strong>weigh-in check-in time</strong> (the deadline for that group).</p>
+          <p><strong>End = 0</strong> means "all remaining boats" — use this only for the last flight. When you save, it is auto-capped to the current highest boat number in the roster.</p>
+          {flights.length > 0 ? (
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, marginTop: 8 }}>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: 'left', padding: '4px 0', color: 'var(--header-bg)', fontWeight: 700 }}>Boats</th>
+                  <th style={{ textAlign: 'right', padding: '4px 0', color: 'var(--header-bg)', fontWeight: 700 }}>Check-In Time</th>
+                </tr>
+              </thead>
+              <tbody>
+                {flights.map((f, i) => {
+                  const start = String(f.boatStart).padStart(2, '0');
+                  const isLast = i === flights.length - 1;
+                  const range = isLast ? `${start}+` : `${start}–${String(f.boatEnd).padStart(2, '0')}`;
+                  return (
+                    <tr key={i} style={{ borderBottom: '1px solid var(--card-border)' }}>
+                      <td style={{ padding: '5px 0', color: 'var(--white)' }}>Boats {range}</td>
+                      <td style={{ padding: '5px 0', color: 'var(--gold-light)', textAlign: 'right' }}>{f.checkInTime || '—'}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          ) : (
+            <p style={{ color: 'var(--gold-light)' }}>No flights configured yet — add them in Flight Schedule above.</p>
+          )}
+        </>
+      ),
+    },
+    {
+      key: 'payout',
+      label: '💰 Payout Formula',
+      body: (
+        <>
+          <p>The payout cascades down from 1st place using step-down ratios. The entry fee is <strong>${entry}</strong>.</p>
+          <ul>
+            <li><strong>1st place</strong> receives ~56% of the premium pool (field size above 75 boats)</li>
+            <li>Remaining places step down using 3/7 · 2/3 · 4/5 · 3/4 ratios</li>
+            <li>The base $6,000 minimum payout is pre-configured across places</li>
+          </ul>
+          <p><strong>Option Pot</strong> is paid back 100%: <strong>{opt1Pct}%</strong> to highest finishing option-pot team, <strong>{opt2Pct}%</strong> to second highest.</p>
+          <p>You can save custom payout configurations as presets in <strong>Payout Structure</strong> above.</p>
+        </>
+      ),
+    },
+    {
+      key: 'badges',
+      label: '🏷️ Badge & Flag Reference',
+      body: (
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+          <tbody>
+            {[
+              ['Self-sub (amber)', 'Entry created online by the angler — not yet staff-verified'],
+              ['⚠️ on name', 'Self-submitted AND digitally signed — needs fee verification'],
+              ['$? Verify (amber)', 'Fee has not been verified by staff yet'],
+              ['DNS badge', 'Did Not Start — blocked from weigh-in'],
+              ['DQ badge', 'Disqualified — late return; placed below all non-DQ boats'],
+              ['Green boat #', 'Boat has checked in (physical arrival recorded)'],
+              ['Needs Attention flag', 'Entry flagged for staff review (self-registered entries)'],
+            ].map(([badge, desc]) => (
+              <tr key={badge} style={{ borderBottom: '1px solid var(--card-border)', verticalAlign: 'top' }}>
+                <td style={{ padding: '5px 6px 5px 0', color: 'var(--gold-light)', fontWeight: 600, whiteSpace: 'nowrap' }}>{badge}</td>
+                <td style={{ padding: '5px 0 5px 6px', color: 'var(--header-bg)' }}>{desc}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      ),
+    },
+  ];
+
+  return (
+    <div style={{ background: 'var(--settings-panel-bg)', border: '1px solid rgba(139,180,225,0.2)', borderRadius: 10, padding: 20, marginBottom: 16 }}>
+      <h3 style={{ color: 'var(--header-bg)', fontSize: 14, marginBottom: 14, textTransform: 'uppercase', letterSpacing: 1, textAlign: 'center' }}>
+        Admin Help &amp; Reference
+      </h3>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        {sections.map(({ key, label, body }) => (
+          <div key={key} style={{ borderRadius: 8, border: '1px solid var(--card-border)', overflow: 'hidden' }}>
+            <button
+              type="button"
+              onClick={() => toggle(key)}
+              style={{
+                width: '100%', textAlign: 'left', padding: '10px 14px',
+                background: open === key ? 'rgba(139,180,225,0.08)' : 'transparent',
+                border: 'none', cursor: 'pointer',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                color: 'var(--white)', fontSize: 13, fontWeight: 700,
+              }}
+            >
+              {label}
+              <span style={{ color: 'var(--header-bg)', fontSize: 12 }}>{open === key ? '▲' : '▼'}</span>
+            </button>
+            {open === key && (
+              <div style={{
+                padding: '10px 14px 14px',
+                fontSize: 13, lineHeight: 1.7,
+                color: 'var(--header-bg)',
+                borderTop: '1px solid var(--card-border)',
+              }}>
+                <style>{`
+                  .admin-help-body strong { color: var(--gold-light); }
+                  .admin-help-body ul { padding-left: 18px; margin: 6px 0 10px; }
+                  .admin-help-body li { margin-bottom: 4px; }
+                  .admin-help-body p { margin: 0 0 8px; }
+                `}</style>
+                <div className="admin-help-body">{body}</div>
+              </div>
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );

@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
+import HelpBubble from './HelpBubble';
 
 export default function BoatCheckTab({ entries, settings, isUnlocked, onToggleOffWater, onReset }) {
   const offWater = settings.offWater || {};
@@ -60,6 +61,24 @@ export default function BoatCheckTab({ entries, settings, isUnlocked, onToggleOf
   return (
     <div className="tab-panel active" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div className="toolbar">
+        <h2 style={{ color: 'var(--gold-light)', fontSize: 18, fontWeight: 800, display: 'flex', alignItems: 'center' }}>
+          🏁 Check Out
+          <HelpBubble title="Check Out — How It Works">
+            {(() => {
+              const lateMin = parseInt(settings?.penalties?.latePenaltyPerMin) || 0;
+              const dqMin   = parseInt(settings?.penalties?.latePenaltyDQMin)  || 15;
+              return (
+                <>
+                  <strong style={{ color: 'var(--gold-light)' }}>What it does:</strong> Records when a boat leaves the water. Enter a boat # and tap Check Out — or tap the row in the list below.
+                  <br /><br />
+                  <strong style={{ color: 'var(--gold-light)' }}>Why it matters:</strong> The checkout timestamp is compared to each flight's weigh-in deadline. Boats that return late receive a {lateMin} lb/min weight penalty, and are disqualified after {dqMin} minutes late.
+                  <br /><br />
+                  <strong style={{ color: 'var(--gold-light)' }}>✔ All Clear</strong> = every checked-in boat has been checked out.
+                </>
+              );
+            })()}
+          </HelpBubble>
+        </h2>
         <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
           <button
             onClick={cycleFilter}

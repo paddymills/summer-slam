@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { formatPhone } from '../utils/phone';
+import HelpBubble from './HelpBubble';
 
 function isOn(v) { return v === 1 || v === '1'; }
 
@@ -138,7 +139,16 @@ export default function CheckInTab({ entries, onSave, settings }) {
   return (
     <div className="tab-panel active" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div className="toolbar">
-        <h2 style={{ color: 'var(--gold-light)', fontSize: 18, fontWeight: 800 }}>✅ Check In</h2>
+        <h2 style={{ color: 'var(--gold-light)', fontSize: 18, fontWeight: 800, display: 'flex', alignItems: 'center' }}>
+          ✅ Check In
+          <HelpBubble title="Check In — How It Works">
+            <strong style={{ color: '#c8b46a' }}>What it does:</strong> Records a boat's physical arrival at the launch. Search by name, phone, or boat # — tap a row to expand and save.
+            <br /><br />
+            <strong style={{ color: '#c8b46a' }}>Green boat #</strong> = already checked in.
+            <br /><br />
+            <strong style={{ color: '#c8b46a' }}>DNS</strong> (Did Not Start) = the boat registered but did not launch. DNS entries cannot weigh in. Set this for no-shows after blast off.
+          </HelpBubble>
+        </h2>
       </div>
 
       <div style={{ maxWidth: 560, margin: '0 auto', width: '100%', paddingBottom: 12, borderBottom: '1px solid rgba(168,200,160,0.13)', flexShrink: 0 }}>

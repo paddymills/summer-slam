@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import HelpBubble from './HelpBubble';
 
 const FIELD = {
   background: 'rgba(255,255,255,0.06)',
@@ -198,7 +199,41 @@ export default function WeighInTab({ entries, settings, onWeighIn, onAddEntry, o
     <div className="tab-panel active">
       <div className="tab-scroll">
       <div className="toolbar">
-        <h2 style={{ color: 'var(--gold-light)', fontSize: 18, fontWeight: 800 }}>🎣 Weigh In</h2>
+        <h2 style={{ color: 'var(--gold-light)', fontSize: 18, fontWeight: 800, display: 'flex', alignItems: 'center' }}>
+          🎣 Weigh In
+          <HelpBubble title="Weigh In — How It Works">
+            {(() => {
+              const flights = (settings?.flights || [])
+                .slice().sort((a, b) => (parseInt(a.boatStart) || 0) - (parseInt(b.boatStart) || 0));
+              const maxFish   = parseInt(settings?.penalties?.maxFish) || 5;
+              const minLen    = parseInt(settings?.penalties?.minFishLength) || 15;
+              const dqMin     = parseInt(settings?.penalties?.latePenaltyDQMin) || 15;
+              return (
+                <>
+                  <strong style={{ color: 'var(--gold-light)' }}>Enter boat #</strong> to look up the team, then fill in fish count, penalties, and total weight.
+                  <br /><br />
+                  <strong style={{ color: 'var(--gold-light)' }}>Limit:</strong> {maxFish} fish · {minLen}" minimum length
+                  {flights.length > 0 && (
+                    <>
+                      <br /><br />
+                      <strong style={{ color: 'var(--gold-light)' }}>Weigh-in times:</strong>
+                      {flights.map((f, i) => {
+                        const start = String(f.boatStart).padStart(2, '0');
+                        const isLast = i === flights.length - 1;
+                        const range = isLast ? `${start}+` : `${start}–${String(f.boatEnd).padStart(2, '0')}`;
+                        return <div key={i} style={{ paddingLeft: 8 }}>Boats {range} → {f.checkInTime || '—'}</div>;
+                      })}
+                    </>
+                  )}
+                  <br />
+                  <strong style={{ color: 'var(--gold-light)' }}>DQ</strong> = disqualified (returned {dqMin}+ min late). Their weight is recorded but they place below all non-DQ boats. You can still weigh them in.
+                  <br /><br />
+                  <strong style={{ color: 'var(--gold-light)' }}>DNS</strong> = Did Not Start. Cannot weigh in.
+                </>
+              );
+            })()}
+          </HelpBubble>
+        </h2>
       </div>
       <div style={{ maxWidth: 520, margin: '0 auto', paddingTop: 16 }}>
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
