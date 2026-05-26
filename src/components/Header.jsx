@@ -36,10 +36,10 @@ export default function Header({ entries, settings, activeTab, onTabChange, onTh
           <button
             className="theme-toggle"
             onClick={onToggleLock}
-            title={isAdmin ? 'Admin — tap to lock' : isOperator ? 'Operator — tap to lock' : 'Unlock'}
+            title={isAdmin ? 'Admin — tap to lock' : isOperator ? 'Staff — tap to lock' : 'Unlock'}
             style={{ opacity: isOperator ? 1 : 0.7 }}
           >
-            {isAdmin ? '🔓 Admin' : isOperator ? '🔓 Operator' : '🔒 Locked'}
+            {isAdmin ? '🔓 Admin' : isOperator ? '🔓 Staff' : '🔒 Locked'}
           </button>
         </div>
       </div>

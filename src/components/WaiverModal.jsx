@@ -462,7 +462,7 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
   }
 
   async function handleSubmit(pinVerified = false) {
-    if (!unlocked && !pinVerified) { setError('Operator must enter their PIN to unlock and record fees before submitting.'); return; }
+    if (!unlocked && !pinVerified) { setError('Staff must enter their PIN to unlock and record fees before submitting.'); return; }
     const amount = usesSplitFeeUI
       ? existingBuyIn + (parseFloat(additionalAmount) || 0)
       : parseFloat(buyInAmount);
@@ -630,7 +630,7 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
                   fontSize: 14, cursor: 'pointer', color: '#444', fontWeight: 600,
                 }}
               >
-                🔒 Enter Operator PIN to Record Fees
+                🔒 Enter Staff PIN to Record Fees
               </button>
             ) : (
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -639,7 +639,7 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
                   type="text"
                   inputMode="numeric"
                   autoComplete="off"
-                  placeholder="Operator PIN"
+                  placeholder="Staff PIN"
                   value={pinInput}
                   onChange={e => { setPinInput(e.target.value); setPinError(''); }}
                   onKeyDown={e => { if (e.key === 'Enter') tryUnlock(); if (e.key === 'Escape') { setShowPinInput(false); setPinInput(''); setPinError(''); }}}
@@ -657,7 +657,7 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
             )}
             {pinError && <p style={{ color: '#c00', fontSize: 12, margin: '6px 0 0' }}>{pinError}</p>}
             <p style={{ fontSize: 11, color: '#888', marginTop: 8, textAlign: 'center' }}>
-              Operator must enter fees — this section is locked to anglers.
+              Staff must enter fees — this section is locked to anglers.
             </p>
           </div>
         ) : usesSplitFeeUI ? (
@@ -894,7 +894,7 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
               <div style={{ background: 'rgba(240,173,78,0.12)', border: '1.5px solid rgba(240,173,78,0.5)', borderRadius: 8, padding: '10px 14px', marginBottom: 16, textAlign: 'center', color: '#f0ad4e', fontSize: 13 }}>
                 {submittedSigs?.customerMode
                   ? '⚠ Your self-reported fee will be verified by tournament staff before your entry is confirmed as paid.'
-                  : '⚠ Fee entry is pending — an operator will complete this before the tournament.'}
+                  : '⚠ Fee entry is pending — staff will complete this before the tournament.'}
               </div>
             )}
           </>
@@ -1046,7 +1046,7 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
                       fontSize: 14, cursor: 'pointer', color: '#444', fontWeight: 600,
                     }}
                   >
-                    🔒 Enter Operator PIN to Submit
+                    🔒 Enter Staff PIN to Submit
                   </button>
                 ) : (
                   <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -1055,7 +1055,7 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
                       type="text"
                       inputMode="numeric"
                       autoComplete="off"
-                      placeholder="Operator PIN"
+                      placeholder="Staff PIN"
                       value={pinInput}
                       onChange={e => { setPinInput(e.target.value); setPinError(''); }}
                       onKeyDown={e => { if (e.key === 'Enter') tryUnlock(); if (e.key === 'Escape') { setShowPinInput(false); setPinInput(''); setPinError(''); } }}
@@ -1117,7 +1117,7 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
                       color: '#f0ad4e',
                     }}
                   >
-                    ✓ Sign Application — Fee Pending (Operator will complete)
+                    ✓ Sign Application — Fee Pending (Staff will complete)
                   </button>
                 )}
               </>

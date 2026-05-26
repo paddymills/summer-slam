@@ -605,7 +605,7 @@ export default function RosterTab({
     return (
       <div className="tab-panel active" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
         <div style={{ padding: '12px 20px 10px', flexShrink: 0, background: 'rgba(139,180,225,0.07)', borderBottom: '1px solid rgba(139,180,225,0.2)', fontSize: 13, color: 'var(--header-bg)', lineHeight: 1.6 }}>
-          <strong style={{ color: 'var(--white)' }}>Operator View — All Entries.</strong>{' '}
+          <strong style={{ color: 'var(--white)' }}>Staff View — All Entries.</strong>{' '}
           Dimmed rows have not yet completed registration. Use <strong style={{ color: 'var(--white)' }}>Edit</strong> to add a co-angler, adjust buy-in, or update Lunker/Option. Use <strong style={{ color: 'var(--white)' }}>App</strong> to view a signed application.
         </div>
         <div className="toolbar" style={{ flexShrink: 0 }}>

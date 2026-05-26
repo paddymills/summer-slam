@@ -453,7 +453,7 @@ function FindAndEdit({ entries, onEdit }) {
   );
 }
 
-export default function SignUpTab({ onAddEntry, onDeleteEntry, onEdit, settings, entries = [], onEntriesRefresh, isOperator = false }) {
+export default function SignUpTab({ onAddEntry, onDeleteEntry, onEdit, settings, entries = [], onEntriesRefresh, isOperator = false, isAdmin = false }) {
   const entryFee = parseFloat(settings?.fees?.entryFee) || 250;
   const lunkerFee = parseFloat(settings?.fees?.lunkerFee) || 10;
   const optFee    = parseFloat(settings?.fees?.optFee)    || 20;
@@ -969,7 +969,7 @@ export default function SignUpTab({ onAddEntry, onDeleteEntry, onEdit, settings,
                     fontSize: 14, cursor: 'pointer', color: 'var(--header-bg)', fontWeight: 600,
                   }}
                 >
-                  🔒 Enter Operator PIN to Submit Paper Copy
+                  🔒 Enter Staff PIN to Submit Paper Copy
                 </button>
               ) : (
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -978,7 +978,7 @@ export default function SignUpTab({ onAddEntry, onDeleteEntry, onEdit, settings,
                     type="text"
                     inputMode="numeric"
                     autoComplete="off"
-                    placeholder="Operator PIN"
+                    placeholder="Staff PIN"
                     value={paperPin}
                     onChange={e => { setPaperPin(e.target.value); setPaperPinError(''); }}
                     onKeyDown={e => { if (e.key === 'Enter') tryPaperPin(); if (e.key === 'Escape') { setShowPaperPin(false); setPaperPin(''); setPaperPinError(''); } }}
@@ -998,7 +998,7 @@ export default function SignUpTab({ onAddEntry, onDeleteEntry, onEdit, settings,
             </div>
           )}
           {paperCopy && paperPinUnlocked && (
-            <div style={{ fontSize: 12, color: '#6fcf97', fontWeight: 600, padding: '4px 0' }}>✓ Operator verified</div>
+            <div style={{ fontSize: 12, color: '#6fcf97', fontWeight: 600, padding: '4px 0' }}>✓ Staff verified</div>
           )}
           <div style={{ display: 'flex', gap: 10 }}>
             <button type="submit" className="btn btn-gold" disabled={submitting || (paperCopy && !paperPinUnlocked)}
