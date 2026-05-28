@@ -142,11 +142,11 @@ export default function CheckInTab({ entries, onSave, settings }) {
         <h2 style={{ color: 'var(--gold-light)', fontSize: 18, fontWeight: 800, display: 'flex', alignItems: 'center' }}>
           ✅ Check In
           <HelpBubble title="Check In — How It Works">
-            <strong style={{ color: '#c8b46a' }}>What it does:</strong> Records a boat's physical arrival at the launch. Search by name, phone, or boat # — tap a row to expand and save.
+            <strong style={{ color: 'var(--gold-light)' }}>What it does:</strong> Records a boat's physical arrival at the launch. Search by name, phone, or boat # — tap a row to expand and save.
             <br /><br />
-            <strong style={{ color: '#c8b46a' }}>Green boat #</strong> = already checked in.
+            <strong style={{ color: 'var(--gold-light)' }}>Green boat #</strong> = already checked in.
             <br /><br />
-            <strong style={{ color: '#c8b46a' }}>DNS</strong> (Did Not Start) = the boat registered but did not launch. DNS entries cannot weigh in. Set this for no-shows after blast off.
+            <strong style={{ color: 'var(--gold-light)' }}>DNS</strong> (Did Not Start) = the boat registered but did not launch. DNS entries cannot weigh in. Set this for no-shows after blast off.
           </HelpBubble>
         </h2>
       </div>

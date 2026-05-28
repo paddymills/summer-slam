@@ -893,8 +893,8 @@ function AdminHelp({ settings }) {
   const latePerMin = parseFloat(pen.latePenaltyPerMin) || 0.5;
   const lateDQ  = parseInt(pen.latePenaltyDQMin)     || 15;
   const entry   = parseFloat(fees.entryFee)          || 250;
-  const opt1Pct = parseFloat(settings?.option1Pct)   || 70;
-  const opt2Pct = parseFloat(settings?.option2Pct)   || 30;
+  const opt1Pct = parseFloat(settings?.fees?.option1Pct) || 70;
+  const opt2Pct = 100 - opt1Pct;
 
   const sections = [
     {

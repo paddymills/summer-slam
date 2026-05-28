@@ -2,16 +2,19 @@ import { useState, useRef, useEffect } from 'react';
 
 export default function HelpBubble({ title, children }) {
   const [open, setOpen] = useState(false);
-  const [pos, setPos]   = useState({ top: 0, left: 0 });
+  const [pos, setPos]   = useState({ top: 0, bottom: undefined, left: 0 });
   const btnRef = useRef(null);
   const popRef = useRef(null);
 
   function toggle() {
     if (!open && btnRef.current) {
       const r = btnRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - r.bottom - 16;
+      const openAbove  = spaceBelow < 200;
       setPos({
-        top:  r.bottom + 8,
-        left: Math.max(8, Math.min(r.left, window.innerWidth - 284)),
+        top:    openAbove ? undefined : r.bottom + 8,
+        bottom: openAbove ? (window.innerHeight - r.top + 8) : undefined,
+        left:   Math.max(8, Math.min(r.left, window.innerWidth - 284)),
       });
     }
     setOpen(v => !v);
@@ -42,12 +45,12 @@ export default function HelpBubble({ title, children }) {
         onClick={toggle}
         aria-label="Help"
         style={{
-          width: 17, height: 17,
+          width: 22, height: 22,
           borderRadius: '50%',
           border: '1.5px solid var(--header-bg)',
           background: open ? 'var(--card-bg)' : 'transparent',
           color: 'var(--header-bg)',
-          fontSize: 10, fontWeight: 800,
+          fontSize: 11, fontWeight: 800,
           cursor: 'pointer',
           padding: 0,
           display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
@@ -65,6 +68,7 @@ export default function HelpBubble({ title, children }) {
           style={{
             position: 'fixed',
             top: pos.top,
+            bottom: pos.bottom,
             left: pos.left,
             zIndex: 800,
             background: 'var(--navy-mid)',
@@ -73,6 +77,8 @@ export default function HelpBubble({ title, children }) {
             padding: '13px 15px',
             width: 276,
             maxWidth: 'calc(100vw - 16px)',
+            maxHeight: 'calc(100vh - 32px)',
+            overflowY: 'auto',
             boxShadow: 'var(--card-shadow)',
             fontSize: 13,
             lineHeight: 1.65,
