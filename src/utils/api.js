@@ -237,11 +237,11 @@ export async function createPublicEntry(entry) {
   return parseEntry(await res.json());
 }
 
-export async function signEntryAsCustomer(id, { buyIn, lunker, option, boaterPhone, coAnglerPhone, boaterSig, coAnglerSig }) {
+export async function signEntryAsCustomer(id, { buyIn, lunker, option, boaterPhone, coAnglerPhone, boaterSig, coAnglerSig, boaterOrderNo, coAnglerOrderNo }) {
   const res = await fetchWithTimeout(`${BASE}/entries/${id}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ customerSign: true, buyIn, lunker, option, boaterPhone, coAnglerPhone, boaterSig, coAnglerSig }),
+    body: JSON.stringify({ customerSign: true, buyIn, lunker, option, boaterPhone, coAnglerPhone, boaterSig, coAnglerSig, boaterOrderNo, coAnglerOrderNo }),
   });
   if (res.status === 409) throw new Error('This application has already been signed.');
   if (!res.ok) throw new Error('Failed to save application. Please try again.');

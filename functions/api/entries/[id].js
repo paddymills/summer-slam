@@ -214,7 +214,9 @@ export async function onRequestPatch({ params, request, env }) {
               boater_sig     = COALESCE(?, boater_sig),
               co_angler_sig  = COALESCE(?, co_angler_sig),
               boater_phone   = CASE WHEN (boater_phone   IS NULL OR boater_phone   = '') AND ? != '' THEN ? ELSE boater_phone   END,
-              co_angler_phone= CASE WHEN (co_angler_phone IS NULL OR co_angler_phone= '') AND ? != '' THEN ? ELSE co_angler_phone END
+              co_angler_phone= CASE WHEN (co_angler_phone IS NULL OR co_angler_phone= '') AND ? != '' THEN ? ELSE co_angler_phone END,
+              boater_order_no    = CASE WHEN ? != '' THEN ? ELSE boater_order_no    END,
+              co_angler_order_no = CASE WHEN ? != '' THEN ? ELSE co_angler_order_no END
             WHERE id=?`,
       args: [
         Number(body.buyIn) || 0,
@@ -224,6 +226,8 @@ export async function onRequestPatch({ params, request, env }) {
         body.coAnglerSig  ?? null,
         body.boaterPhone ?? '', body.boaterPhone ?? '',
         body.coAnglerPhone ?? '', body.coAnglerPhone ?? '',
+        (body.boaterOrderNo    ?? '').trim(), (body.boaterOrderNo    ?? '').trim(),
+        (body.coAnglerOrderNo  ?? '').trim(), (body.coAnglerOrderNo  ?? '').trim(),
         params.id,
       ],
     });

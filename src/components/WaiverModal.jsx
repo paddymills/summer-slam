@@ -219,7 +219,9 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
   const [error,         setError]         = useState('');
   const [submitted,       setSubmitted]       = useState(false);
   const [submittedSigs,   setSubmittedSigs]   = useState(null); // { boater, coAngler, result }
-  const [showFeeConfirm,  setShowFeeConfirm]  = useState(false);
+  const [showFeeConfirm,       setShowFeeConfirm]       = useState(false);
+  const [confirmBoaterOrderNo,   setConfirmBoaterOrderNo]   = useState(entry.boaterOrderNo   || '');
+  const [confirmCoAnglerOrderNo, setConfirmCoAnglerOrderNo] = useState(entry.coAnglerOrderNo || '');
   const [nearDupPrompt, setNearDupPrompt] = useState(null);
   const pinRef = useRef(null);
 
@@ -347,13 +349,15 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
       const boaterSigUrl = captureSig(boaterCanvasRef.current);
       const coaSigUrl    = hasCoAngler ? captureSig(coAnglerCanvasRef.current) : null;
       await signEntryAsCustomer(entry.id, {
-        buyIn:          amount,
-        lunker:         lunkerChecked ? 1 : 0,
-        option:         optionChecked ? 1 : 0,
-        boaterPhone:    effectiveBoaterPhone,
-        coAnglerPhone:  effectiveCoAnglerPhone,
-        boaterSig:      boaterSigUrl,
-        coAnglerSig:    coaSigUrl,
+        buyIn:            amount,
+        lunker:           lunkerChecked ? 1 : 0,
+        option:           optionChecked ? 1 : 0,
+        boaterPhone:      effectiveBoaterPhone,
+        coAnglerPhone:    effectiveCoAnglerPhone,
+        boaterSig:        boaterSigUrl,
+        coAnglerSig:      coaSigUrl,
+        boaterOrderNo:    confirmBoaterOrderNo.trim(),
+        coAnglerOrderNo:  confirmCoAnglerOrderNo.trim(),
       });
       const result = { appSigned: 1, buyIn: amount, lunker: lunkerChecked ? 1 : 0, option: optionChecked ? 1 : 0, paid: 0, feeVerified: 0 };
       setSubmittedSigs({ boater: boaterSigUrl, coAngler: coaSigUrl, result, customerMode: true });
@@ -965,14 +969,35 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
                   <div style={{ fontSize: 17, fontWeight: 900, color: '#7a5c00', marginBottom: 12, textAlign: 'center', textTransform: 'uppercase', letterSpacing: 0.5 }}>
                     ⚠ Before You Submit — Fee Verification Required
                   </div>
-                  <div style={{ fontSize: 14, color: '#5a4200', lineHeight: 1.75, marginBottom: 16 }}>
+                  <div style={{ fontSize: 14, color: '#5a4200', lineHeight: 1.75, marginBottom: 14 }}>
                     <div style={{ marginBottom: 10 }}>
                       <strong>In-Store Purchase:</strong> Email or text a photo of your receipt along with your <strong>boater first and last name</strong> to tournament staff for verification.
                     </div>
                     <div>
-                      <strong>Online Order:</strong> Your order number is required for verification. Make sure your order number is entered on your application before submitting, or contact staff to provide it.
+                      <strong>Online Order:</strong> Enter your order number(s) below so staff can verify your purchase remotely.
                     </div>
                   </div>
+
+                  {/* Order number inputs */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
+                    <input
+                      type="text"
+                      placeholder="Boater online order # (optional)"
+                      value={confirmBoaterOrderNo}
+                      onChange={e => setConfirmBoaterOrderNo(e.target.value)}
+                      style={{ padding: '9px 12px', fontSize: 14, borderRadius: 6, border: '1.5px solid #c8a000', boxSizing: 'border-box', width: '100%', background: '#fffbee' }}
+                    />
+                    {hasCoAngler && (
+                      <input
+                        type="text"
+                        placeholder="Co-angler online order # (optional)"
+                        value={confirmCoAnglerOrderNo}
+                        onChange={e => setConfirmCoAnglerOrderNo(e.target.value)}
+                        style={{ padding: '9px 12px', fontSize: 14, borderRadius: 6, border: '1.5px solid #c8a000', boxSizing: 'border-box', width: '100%', background: '#fffbee' }}
+                      />
+                    )}
+                  </div>
+
                   <div style={{ fontSize: 13, color: '#7a5c00', fontWeight: 700, textAlign: 'center', marginBottom: 16 }}>
                     Your entry will not be confirmed as paid until staff verifies your purchase.
                   </div>
@@ -986,7 +1011,7 @@ export default function WaiverModal({ entry, boaterContactId, coAnglerContactId,
                         fontSize: 14, cursor: 'pointer', color: '#555', fontWeight: 600,
                       }}
                     >
-                      ← Edit Application
+                      ← Back
                     </button>
                     <button
                       type="button"
