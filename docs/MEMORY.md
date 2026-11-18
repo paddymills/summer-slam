@@ -1,0 +1,21 @@
+# Summer Slam Project Memory
+
+- [Project overview](project_overview.md) — Cloudflare Pages + Turso DB fishing tournament app, production at summer-slam.pages.dev
+- [User profile](user_profile.md) — tournament organizer, runs the app on-site at events
+- [Refactor status](project_refactor_status.md) — TanStack Query ✅, TanStack Table ✅, conflict handling ✅ — all phases done (2026-05-13)
+- [UI patterns feedback](feedback_ui_patterns.md) — no click-outside on modals, no ContactSuggest for existing entries, Actions dropdown preference, EmailInput component
+- [Memory habits feedback](feedback_memory_habits.md) — auto-save memory after meaningful changes/milestones without being asked
+- [Branding & images feedback](feedback_branding_images.md) — watermark must be transparent-bg PNG outside main; header bg on header element; mobile bg-position needs !important; 2 themes: dark/light
+- [Waiver upload plan](project_waiver_upload.md) — digital in-app signature (SVG, no R2); season-long waiver per contact; skip re-sign if already on file for the year
+- [Locked roster feature](feature_locked_roster.md) — filter to paid+signed only; disclaimer; team count chip; Boat # column (sortable); exact-match filter; Signed Up column; sortable (all 6)
+- [Check In tab](feature_check_in_tab.md) — search by name/phone/boat#; unpaid $ badge + warning; unsigned ! badge + warning; inline Paid + App Signed toggles; already-checked-in green highlight
+- [Check Out tab](feature_check_out_tab.md) — off-water toggle table; quick check-out input with live name preview; flash feedback; auto-refocus
+- [Mike Mode](feature_mike_mode.md) — large-font TV toggle; fixed grid columns critical to prevent name crush; word-wrap fix; responsive across all breakpoints
+- [Leaderboard tab](feature_leaderboard.md) — summary chips, subtitle with Boats Weighed (X of Y), recently weighed cards, payout cards; do NOT add chips to grid
+- [Currently weighing feature](feature_currently_weighing.md) — planned next year; DB-backed settings field; WeighIn sets it, LeaderboardTab polls and shows banner; separate-device scenario
+- [Header stats bar](feature_header_stats.md) — always-visible chips (Boats, Lunker, Bag, Pots, Total Weight+fish); unlocked+blurred chips (Buy-In, Deductions dead/short); shared blur toggle
+- [Off Limits tab](feature_off_limits_tab.md) — markdown-driven tab right of Rules; {{YEAR}}, {{MAX_FISH}}, {{MIN_LENGTH}}, {{FLIGHT_TIMES}} placeholders; images in public/; minFishLength setting added
+- [Contacts dedup](project_contacts_dedup.md) — autofill contact ID via ref, update-by-ID API path; stale ref bug fixed 2026-05-15 (clear ref on manual name edit)
+- [Print / PDF feature](feature_print_pdf.md) — Rules + Off Limits tabs: window.print(), document.title swap for filename, compact letter-paper CSS, QR code via qrcode npm package
+- [Tournament hardening](feature_tournament_hardening.md) — destructive ops require password re-entry; SW pre-caches shell; weigh-in overwrite requires explicit confirm (2026-05-15)
+- [Memory repo](reference_memory_repo.md) — private GitHub repo summer-slam-claude; auto-sync hook in settings.json; restore instructions for new devices
